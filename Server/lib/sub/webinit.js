@@ -18,7 +18,10 @@
 
 // By https://github.com/ishqqytiger
 
+var File	 = require("fs");
+var Path	 = require("path");
 var GLOBAL	 = require("./global.json");
+var PUBLIC_DIR = Path.resolve(__dirname, "../Web/public");
 var JLog	 = require("./jjlog");
 var Language = {
 	'ko_KR': require("../Web/lang/ko_KR.json"),
@@ -60,6 +63,13 @@ function getLanguage(locale, page, shop){
 	}
 	
 	return R;
+}
+function hasPublicFile(rel){
+	try{
+		return File.statSync(Path.join(PUBLIC_DIR, rel)).isFile();
+	}catch(e){
+		return false;
+	}
 }
 function isInternalIp(ip){
 	if(!ip) return false;
@@ -113,6 +123,9 @@ function page(req, res, file, data){
 	}else{
 		data.page = file;
 	}
+	
+	data.pageCss = hasPublicFile(`css/in_${data.page.replace("/", "_")}.css`);
+	data.pageJs = hasPublicFile(`js/in_${data.page.replace("/", "_")}.min.js`);
 	
 	JLog.log(`${addr}@${sid.slice(0, 10)} ${data.page}, ${JSON.stringify(req.params)}`);
 	JLog.log(`${req.get('X-Forwarded-For')}, ${cfConnectingIp}`);

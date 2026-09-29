@@ -116,8 +116,11 @@ mixin PageHead(min)
 		//script(type='text/javascript', src='/js/facebook.js')
 	if block
 		block
-	link(rel='stylesheet', href='/css/in_'+locals.page.replace("/", "_")+'.css')
-	script(type='text/javascript', src='/js/in_'+locals.page.replace("/", "_")+'.min.js')
+	//- 페이지 전용 파일이 없는 페이지(모바일 페이지 등)는 404 요청을 보내지 않는다.
+	if locals.pageCss !== false
+		link(rel='stylesheet', href='/css/in_'+locals.page.replace("/", "_")+'.css')
+	if locals.pageJs !== false
+		script(type='text/javascript', src='/js/in_'+locals.page.replace("/", "_")+'.min.js')
 	
 mixin SearchBox(arg1, arg2)
 	meta(name='description', content=L('meta_desc', arg1, arg2))

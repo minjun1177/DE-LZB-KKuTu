@@ -118,6 +118,8 @@
 	"login": {
 		"title": "Login",
 		"loginWith": "Select a login method.",
+		"loginNone": "No login method is available. You can still play as a guest.",
+		"loginNoneBack": "Back to the start page",
 		"withDaldalso": "Login with Daldalso",
 		"withNaver": "Login with Naver",
 		"withFacebook": "Login with Facebook",
