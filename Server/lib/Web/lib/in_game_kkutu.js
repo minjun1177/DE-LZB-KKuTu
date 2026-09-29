@@ -2519,8 +2519,12 @@ function route(func, a0, a1, a2, a3, a4){
 }
 function connectToRoom(chan, rid){
 	var url = $data.URL.replace(/:(\d+)/, function(v, p1){
-		// return ":" + (Number(p1) + 30 + Number(chan) - 1); // WHY?????
-		return ":" + $data.ROOM_PORT || (Number(p1) + 416 + Number(chan) - 1);
+		// 채널 N의 방 서버는 ROOM_PORTS[서버] + (N - 1) 포트에서 받는다. (Game/cluster.js)
+		// 예전 코드(":" + ROOM_PORT || ...)는 항상 참이라 채널과 관계없이 1번 채널 포트로만 접속해,
+		// 2번 이상 채널에 만들어진 방에 들어갈 수 없었다.
+		var base = Number($data.ROOM_PORT) || (Number(p1) + 416);
+		
+		return ":" + (base + Number(chan) - 1);
 	}) + "&" + chan + "&" + rid;
 	
 	if(rws) return;

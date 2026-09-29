@@ -77,11 +77,24 @@ docker compose down -v       # stop AND wipe the database (re-seeds db.sql next 
 | What | Where |
 | ---- | ----- |
 | **Web portal (visit this)** | <http://localhost/> — port `80` |
-| Game WebSocket | port `8080` (`MAIN_PORTS[0]`) — mostly internal |
-| Room port | port `8496` (`ROOM_PORTS[0]`) — mostly internal |
+| Game WebSocket (lobby) | port `8080` (`MAIN_PORTS[0]`) — the browser connects here directly |
+| Room port (channel N) | port `8496 + (N - 1)` (`ROOM_PORTS[0]`) — the browser connects here directly |
 
 The web service reaches the game service internally via the Compose network
-(`GAME_SERVER_HOST: game`), so you normally only need port 80.
+(`GAME_SERVER_HOST: game`), but players' browsers connect to the game ports
+directly, so `8080` and the room ports must be reachable from outside.
+
+The default game command `node lib/Game/cluster.js 0 1` runs **one** room channel
+(port `8496`). To run more channels, raise the last argument and publish one more
+room port per channel, e.g. for 3 channels:
+
+```yaml
+  game:
+    command: ["node", "lib/Game/cluster.js", "0", "3"]
+    ports:
+      - "8080:8080"
+      - "8496-8498:8496-8498"
+```
 
 - **Guest play:** works immediately, no configuration.
 - **Social login (OAuth):** disabled until you fill `deploy/auth.docker.json`
@@ -227,11 +240,23 @@ docker compose down -v       # 종료 + DB 삭제 (다음 실행 시 db.sql 재�
 | 항목 | 위치 |
 | ---- | ---- |
 | **웹 포털 (여기로 접속)** | <http://localhost/> — 포트 `80` |
-| 게임 WebSocket | 포트 `8080` (`MAIN_PORTS[0]`) — 주로 내부용 |
-| 방(Room) 포트 | 포트 `8496` (`ROOM_PORTS[0]`) — 주로 내부용 |
+| 게임 WebSocket (로비) | 포트 `8080` (`MAIN_PORTS[0]`) — 브라우저가 직접 접속 |
+| 방(Room) 포트 (채널 N) | 포트 `8496 + (N - 1)` (`ROOM_PORTS[0]`) — 브라우저가 직접 접속 |
 
-web 서비스는 Compose 네트워크를 통해 game 서비스에 내부적으로 접속하므로
-(`GAME_SERVER_HOST: game`), 보통 포트 80만 있으면 됩니다.
+web 서비스는 Compose 네트워크를 통해 game 서비스에 내부적으로 접속하지만
+(`GAME_SERVER_HOST: game`), 플레이어의 브라우저는 게임 포트에 직접 접속하므로
+`8080`과 방 포트는 외부에서 접근할 수 있어야 합니다.
+
+기본 game 명령 `node lib/Game/cluster.js 0 1`은 방 채널을 **1개**(포트 `8496`) 띄웁니다.
+채널을 늘리려면 마지막 인자를 올리고 채널마다 방 포트를 하나씩 더 열어 주세요. 예: 채널 3개
+
+```yaml
+  game:
+    command: ["node", "lib/Game/cluster.js", "0", "3"]
+    ports:
+      - "8080:8080"
+      - "8496-8498:8496-8498"
+```
 
 - **게스트 플레이:** 설정 없이 바로 가능.
 - **소셜 로그인(OAuth):** `deploy/auth.docker.json`을 채우기 전까지 비활성화(아래 참고).
