@@ -26,7 +26,7 @@ Commands:
   reset        Stop the stack AND wipe the database (re-imports db.sql next 'up')
   logs         Tail the web + game logs (Ctrl-C to stop)
   status       Show service status / health
-  restart-web  Restart only the web service (needed if game restarted)
+  restart-web  Restart only the web service
   help         Show this help
 
 If no command is given, 'up' is assumed.

@@ -123,7 +123,7 @@ discord, kakao, github, etc.). Guest play needs nothing here.
 docker compose up --build -d      # build + start in background
 docker compose ps                 # service status / health
 docker compose logs -f web game   # tail app logs
-docker compose restart web        # restart just the web service (see note below)
+docker compose restart web        # restart just the web service
 docker compose down               # stop, keep data
 docker compose down -v            # stop and wipe the db volume (full re-seed)
 ```
@@ -133,9 +133,11 @@ docker compose down -v            # stop and wipe the db volume (full re-seed)
 - **First boot takes minutes / `db` not healthy yet** — Postgres is importing the
   large `db.sql`. Watch it with `docker compose logs -f db`. Wait for the
   `start_period` (up to 5 min) before assuming failure.
-- **`web` shows errors after `game` restarted** — `web` does not automatically
-  re-dial `game` after the connection drops. If `game` restarts, restart web too:
-  `docker compose restart web`.
+- **Server list is empty right after `game` restarted** — `web` re-dials `game`
+  automatically every 5 seconds; wait a few seconds. Restarting web is not needed.
+- **Where are game errors logged?** — in `docker compose logs game`, and inside the
+  container at `/app/KKUTU_ERROR.log` (`docker compose exec game tail -f /app/KKUTU_ERROR.log`).
+  The file lives in the container, so it is lost when the container is recreated.
 - **Login/OAuth does nothing** — expected until you fill `deploy/auth.docker.json`.
   Use guest play, or add provider credentials.
 - **App can't connect to the database** — check that `PG_PASSWORD`
@@ -271,7 +273,7 @@ web 서비스는 Compose 네트워크를 통해 game 서비스에 내부적으�
 docker compose up --build -d      # 빌드 + 백그라운드 실행
 docker compose ps                 # 서비스 상태 / 헬스
 docker compose logs -f web game   # 앱 로그 확인
-docker compose restart web        # web 서비스만 재시작 (아래 참고)
+docker compose restart web        # web 서비스만 재시작
 docker compose down               # 종료 (데이터 유지)
 docker compose down -v            # 종료 + db 볼륨 삭제 (전체 재시드)
 ```
@@ -281,9 +283,11 @@ docker compose down -v            # 종료 + db 볼륨 삭제 (전체 재시드)
 - **최초 실행이 수 분 걸림 / `db`가 healthy가 안 됨** — Postgres가 큰 `db.sql`을
   임포트하는 중입니다. `docker compose logs -f db`로 확인하고, 실패로 판단하기
   전에 `start_period`(최대 5분)를 기다리세요.
-- **`game` 재시작 후 `web`에 오류 발생** — `web`은 연결이 끊긴 뒤 `game`에
-  자동으로 재접속하지 않습니다. `game`을 재시작했다면 web도 재시작하세요:
-  `docker compose restart web`.
+- **`game` 재시작 직후 서버 목록이 비어 있음** — `web`이 5초마다 `game`에 자동으로
+  다시 접속합니다. 몇 초 기다리면 되며, web을 재시작할 필요는 없습니다.
+- **게임 오류 로그 위치** — `docker compose logs game` 및 컨테이너 안의
+  `/app/KKUTU_ERROR.log`(`docker compose exec game tail -f /app/KKUTU_ERROR.log`).
+  컨테이너 안의 파일이므로 컨테이너를 다시 만들면 사라집니다.
 - **로그인/OAuth가 동작하지 않음** — `deploy/auth.docker.json`을 채우기 전까지
   정상입니다. 게스트로 플레이하거나 제공자 자격 증명을 추가하세요.
 - **앱이 DB에 연결하지 못함** — `PG_PASSWORD`(`deploy/global.docker.json`)와

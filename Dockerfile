@@ -11,6 +11,10 @@ RUN cd lib && npm ci --omit=optional --no-audit --no-fund
 COPY Server/lib ./lib
 RUN cd lib && npx grunt default pack
 
+# The app runs as 'node' but /app is root-owned; pre-create the error log
+# (Game/master.js, Game/slave.js append to /app/KKUTU_ERROR.log) so it is writable.
+RUN touch /app/KKUTU_ERROR.log && chown node:node /app/KKUTU_ERROR.log
+
 USER node
 EXPOSE 80 8080 8496
 CMD ["node", "lib/Game/cluster.js", "0", "1"]

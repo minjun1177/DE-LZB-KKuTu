@@ -141,7 +141,7 @@ echo   down         Stop the stack (keeps the database volume)
 echo   reset        Stop the stack AND wipe the database (re-imports db.sql next 'up')
 echo   logs         Tail the web + game logs (Ctrl-C to stop)
 echo   status       Show service status / health
-echo   restart-web  Restart only the web service (needed if game restarted)
+echo   restart-web  Restart only the web service
 echo   help         Show this help
 echo.
 echo If no command is given, 'up' is assumed.
