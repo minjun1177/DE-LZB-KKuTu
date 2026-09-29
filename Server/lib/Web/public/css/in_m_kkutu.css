@@ -146,7 +146,10 @@ iframe{
 		.dialog-opt{ float: left; width: 100px; }
 	.tail-button{ margin-top: 7px; }
 	/* 모바일 글꼴에서는 규칙 이름이 두 줄로 넘어가 확인 버튼 옆에 붙으므로, 줄바꿈을 막고 버튼을 규칙 목록 아래로 내린다. */
-	#RoomDiag .dialog-opt label{ white-space: nowrap; letter-spacing: -0.5px; }
+	#RoomDiag .dialog-opt label, #QuickDiag .dialog-opt label{ white-space: nowrap; letter-spacing: -0.5px; }
+	#quickstat{ clear: both; margin-top: 18px; }
+	/* 설정 창의 빈 h4는 들여쓰기 칸이다. 모바일은 줄 높이가 달라 float 위치가 어긋나므로 항상 새 줄 왼쪽에서 시작하게 한다. */
+	#SettingDiag .dialog-bar h4:empty{ clear: left; }
 	#roombtn{ clear: both; margin-top: 18px;}
 	.tail-button button{ float: right; margin-right: 5px; width: 80px; height: 20px; }
 	.dialog .closeBtn{
