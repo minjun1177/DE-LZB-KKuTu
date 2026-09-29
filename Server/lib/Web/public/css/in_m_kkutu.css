@@ -145,6 +145,9 @@ iframe{
 	.dialog-bar button{ float: left; }
 		.dialog-opt{ float: left; width: 100px; }
 	.tail-button{ margin-top: 7px; }
+	/* 모바일 글꼴에서는 규칙 이름이 두 줄로 넘어가 확인 버튼 옆에 붙으므로, 줄바꿈을 막고 버튼을 규칙 목록 아래로 내린다. */
+	#RoomDiag .dialog-opt label{ white-space: nowrap; letter-spacing: -0.5px; }
+	#roombtn{ clear: both; margin-top: 18px;}
 	.tail-button button{ float: right; margin-right: 5px; width: 80px; height: 20px; }
 	.dialog .closeBtn{
 		float: right;
