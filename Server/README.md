@@ -443,7 +443,7 @@ psql -U postgres kkutu < backup_users.sql
 
 ## 기타
 
-- 언어팩을 수정하였다면 `'서버주소'/language/flush`로 접속하여 새로고침합니다.
+- 언어팩을 수정하였다면 `'서버주소'/language/flush`로 접속하여 새로고침합니다. (관리자 계정으로 로그인했거나 내부망에서 접속한 경우에만 허용됩니다.)
 - 사기 봇을 제외한 봇은 최소 hit값이 있습니다. 따라서 정상적인 봇을 사용하려면 데이터베이스 kkutu_en/kkutu_ko 테이블안의 hit값을 수정해야 합니다.
 - 클라우드플레어 사용 시 서버와 유저가 통신하는 모든 포트는 [클라우드플레어가 지원하는 포트](https://developers.cloudflare.com/fundamentals/reference/network-ports/) 중 하나로 설정하셔야 합니다.
 - 새로운 기능 Discord Webhook 알림 기능이 추가 되었습니다. 사용시 global.json에서 `USE_DISCORD_WEBHOOK`을 true와 `DISCORD_WEBHOOK_URL`의 알맞는 값을 설정합니다.
@@ -898,7 +898,7 @@ psql -U postgres kkutu < backup_users.sql
 
 ## Notes
 
-- If you edited a language pack, refresh by visiting `'ServerAddress'/language/flush`.
+- If you edited a language pack, refresh by visiting `'ServerAddress'/language/flush`. (Allowed only for admin accounts or from the internal network.)
 - Bots (except cheat bots) require a minimum `hit` value. To use normal bots, update `hit` in `kkutu_en`/`kkutu_ko` tables.
 - When using Cloudflare, all server-client communication ports must be one of [Cloudflare supported ports](https://developers.cloudflare.com/fundamentals/reference/network-ports/).
 - Discord Webhook notification was added. Enable `USE_DISCORD_WEBHOOK` and set `DISCORD_WEBHOOK_URL` in `global.json`.

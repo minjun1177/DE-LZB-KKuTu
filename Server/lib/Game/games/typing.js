@@ -105,7 +105,7 @@ exports.getTitle = function(){
 
 	function pickHard(){ // LZB - Added hard word
 		var data = [];
-		var arr;
+		var arr, tmp, k;
 
 		for (i=0; i<my.round; i++){
 			arr = [];
@@ -188,6 +188,9 @@ exports.submit = function(client, text){
 	// var composedText;
 
 	if(!client.game) return;
+	if(!my.game.clist) return;
+	// 관전자 등 게임에 참여하지 않는 사람의 입력은 채팅으로 처리한다.
+	if(!my.game.seq || !my.game.seq.includes(client.id)) return client.chat(text);
 	// if(my.opts.morse && (my.rule.lang == "ko" || my.rule.lang == "en")){ // LZB - Added Morse
 	// 	morseMap = my.rule.lang == "ko" ? KO_MORSE : EN_MORSE;
 	// 	morseDecoded = decodeMorseInput(text, morseMap);

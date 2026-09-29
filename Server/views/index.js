@@ -50,8 +50,9 @@ ipcRenderer.on('log', (ev, level, msg) => {
 		$(".log-item:first").remove();
 	}
 	msg = msg.toString()
-		.replace(/</g, "&lt;")
 		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
 		.replace(/(error)/gi, `<label class="lt-error">$1</label>`)
 	;
 	$stage.log.append($(`<div class="log-item log-${level}">${msg}</div>`));

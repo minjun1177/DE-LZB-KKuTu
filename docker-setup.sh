@@ -65,7 +65,8 @@ wait_for_health() {
     local waited=0
     while [ "$waited" -lt "$HEALTH_TIMEOUT" ]; do
         # A healthy 'web' implies db, redis and game are healthy (dependency chain).
-        if $COMPOSE ps 2>/dev/null | grep -E '^\s*.*web' | grep -q 'healthy'; then
+        # '(healthy)' must match literally: a bare 'healthy' also matches '(unhealthy)'.
+        if $COMPOSE ps 2>/dev/null | grep -E '^\s*.*web' | grep -qF '(healthy)'; then
             echo
             echo "✔ all services healthy"
             return 0

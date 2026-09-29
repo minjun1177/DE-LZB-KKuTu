@@ -131,6 +131,10 @@ exports.init = function(Server, shop){
 		res.send("window.L = "+JSON.stringify(getLanguage(lang, page, shop))+";");
 	});
 	Server.get("/language/flush", function(req, res){
+		// 누구나 언어 파일을 다시 읽게 할 수 없도록 관리자 또는 내부망에서만 허용한다.
+		var isAdmin = req.session && req.session.profile && GLOBAL.ADMIN.indexOf(req.session.profile.id) != -1;
+		
+		if(!isAdmin && !isInternalIp(req.ip)) return res.sendStatus(403);
 		updateLanguage();
 		res.sendStatus(200);
 	});

@@ -231,7 +231,8 @@ exports.getScore = function(text, delay, ignoreMission){
 	var score = Const.getPreScore(text, my.game.chain, tr);
 	var arr;
 	
-	if(!ignoreMission) if(arr = text.match(new RegExp(my.game.mission, "g"))){
+	// 미션이 없을 때(null 등) new RegExp(null)은 "null"과 일치하므로 문자열 미션일 때만 검사한다.
+	if(!ignoreMission && typeof my.game.mission == "string" && my.game.mission.length) if(arr = text.match(new RegExp(my.game.mission.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "g"))){
 		score += score * 0.5 * arr.length;
 		my.game.mission = true;
 	}

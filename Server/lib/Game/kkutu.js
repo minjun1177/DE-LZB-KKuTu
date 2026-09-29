@@ -22,7 +22,6 @@ var Const = require('../const');
 var Lizard = require('../sub/lizard');
 var JLog = require('../sub/jjlog');
 const DiffMatchPatch = require("diff-match-patch");
-const { set } = require("grunt");
 // Discord Webhook [S]
 var GLOBAL = require('../sub/global.json');
 var DCWH = require('../sub/dcwh');
@@ -292,10 +291,10 @@ exports.Client = function(socket, profile, sid){
 		}
 	}
 	sendHeartbeatReq();
-	my._lastHeartbeat = setInterval(() => {
-		sendHeartbeatReq();
-	}, 30000); // 30초마다 하트비트 전송
+	// _lastHeartbeat(마지막 응답 시각)과 타이머 핸들을 분리해야 연결이 끊겼을 때 타이머를 해제할 수 있다.
+	my._heartbeatTimer = setInterval(sendHeartbeatReq, 30000); // 30초마다 하트비트 전송
 	socket.on('close', function(code){
+		clearInterval(my._heartbeatTimer);
 		if(ROOM[my.place]) ROOM[my.place].go(my);
 		if(my.subPlace) my.pracRoom.go(my);
 		exports.onClientClosed(my, code);
@@ -306,6 +305,7 @@ exports.Client = function(socket, profile, sid){
 		if(!msg) return;
 		if(typeof msg !== "string") msg = String(msg);
 		try{ data = JSON.parse(msg); }catch(e){ data = { error: 400 }; }
+		if(!data || typeof data !== "object" || Array.isArray(data)) data = { error: 400 };
 		if(data.type == "heartbeat"){
 			exports.onClientMessage(my, data);
 			return;
@@ -323,12 +323,6 @@ exports.Client = function(socket, profile, sid){
 				DCWH.SendWebhookOnTalk(my.profile, data.value, my.place, my.robot);
 			}catch(error){
 				JLog.warn(`Failed to send Discord webhook on talk: ${error}`);
-			}
-		} else if(data.type == "delete-room" && UseDiscordWebhook && !my.admin){
-			try{
-				DCWH.SendWebhookOnDeleteRoom(data.roomid);
-			}catch(error){
-				JLog.warn(`Failed to send Discord webhook on delete room: ${error}`);
 			}
 		}
 		if(Cluster.isWorker) process.send({ type: "tail-report", id: my.id, chan: channel, place: my.place, msg: data.error ? msg : data });
@@ -614,6 +608,7 @@ exports.Client = function(socket, profile, sid){
 				return my.sendError(409);
 			}
 			if(Cluster.isMaster){
+				if(!CHAN[$room.channel]) return my.sendError(430, room.id);
 				my.send('preRoom', { id: $room.id, pw: room.password, channel: $room.channel });
 				CHAN[$room.channel].send({ type: "room-reserve", session: sid, room: room, spec: spec, pass: pass });
 				
@@ -643,6 +638,7 @@ exports.Client = function(socket, profile, sid){
 			if(Cluster.isMaster){
 				var av = getFreeChannel();
 				
+				if(!CHAN[av]) return my.sendError(430);
 				room.id = _rid;
 				room._create = true;
 				my.send('preRoom', { id: _rid, channel: av });
@@ -698,7 +694,10 @@ exports.Client = function(socket, profile, sid){
 	my.kick = function(target, kickVote){
 		var $room = ROOM[my.place];
 		var i, $c;
-		var len = $room.players.length;
+		var len;
+		
+		if(!$room) return;
+		len = $room.players.length;
 		
 		if(target == null){ // 로봇 (이 경우 kickVote는 로봇의 식별자)
 			$room.removeAI(kickVote);
@@ -736,8 +735,10 @@ exports.Client = function(socket, profile, sid){
 			if($room.kickVote.list.push(client.id) >= $room.players.length - 2){
 				if($room.gaming) return;
 				
-				if($room.kickVote.Y >= $room.kickVote.N) $m.kick($room.kickVote.target, $room.kickVote);
-				else $m.publish('kickDeny', { target: $room.kickVote.target, Y: $room.kickVote.Y, N: $room.kickVote.N }, true);
+				if($m){
+					if($room.kickVote.Y >= $room.kickVote.N) $m.kick($room.kickVote.target, $room.kickVote);
+					else $m.publish('kickDeny', { target: $room.kickVote.target, Y: $room.kickVote.Y, N: $room.kickVote.N }, true);
+				}
 				
 				$room.kickVote = null;
 			}
@@ -1142,7 +1143,7 @@ exports.Room = function(room, channel){
 			}
 			if(ijc = my.rule.opts.includes("ijp")){
 				ij = Const[`${my.rule.lang.toUpperCase()}_IJP`];
-				my.opts.injpick = (room.opts.injpick || []).filter(function(item){ return ij.includes(item); });
+				my.opts.injpick = (Array.isArray(room.opts.injpick) ? room.opts.injpick : []).filter(function(item){ return ij.includes(item); });
 			}else my.opts.injpick = [];
 		}
 		if(!my.rule.ai){
@@ -1599,21 +1600,22 @@ function getFreeChannel(){
 	var i, list = {};
 	
 	if(Cluster.isMaster){
-		var mk = 1;
+		var mk = null;
+		var c;
 		
 		for(i in CHAN){
 			// if(CHAN[i].isDead()) continue;
 			list[i] = 0;
 		}
 		for(i in ROOM){
-			// if(!list.hasOwnProperty(i)) continue;
-			mk = ROOM[i].channel;
-			list[mk]++;
+			c = ROOM[i].channel;
+			if(list.hasOwnProperty(c)) list[c]++;
 		}
+		// 방이 가장 적은 채널을 고른다.
 		for(i in list){
-			if(list[i] < list[mk]) mk = i;
+			if(mk === null || list[i] < list[mk]) mk = i;
 		}
-		return Number(mk);
+		return Number(mk === null ? 1 : mk);
 	}else{
 		return channel || 0;
 	}

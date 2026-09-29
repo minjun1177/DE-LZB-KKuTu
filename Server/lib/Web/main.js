@@ -57,10 +57,13 @@ var gameServers = [];
 WebInit.MOBILE_AVAILABLE = [
 	"portal", "main", "kkutu"
 ];
+const SESSION_SECRET = process.env['KKT_SESSION_SECRET'] || GLOBAL.SESSION_SECRET || 'kkutu';
+const GAME_RECONNECT_DELAY = 5000;
 
 require("../sub/checkpub");
 
 JLog.info("<< KKuTu Web >>");
+if(SESSION_SECRET == 'kkutu') JLog.warn("SESSION_SECRET is not set. Set SESSION_SECRET in global.json (or KKT_SESSION_SECRET) to a long random string.");
 Server.set('views', __dirname + "/views");
 Server.set('view engine', "pug");
 // Behind a local reverse proxy (e.g., nginx), trust X-Forwarded-* headers from loopback.
@@ -78,7 +81,9 @@ Server.use(Exession({
 	}),
 	// use only for redis-installed
 	
-	secret: 'kkutu',
+	// 세션 쿠키 서명 키. 공개된 기본값('kkutu')을 쓰면 누구나 서명된 세션 쿠키를 만들 수 있으므로
+	// global.json의 SESSION_SECRET 또는 환경 변수 KKT_SESSION_SECRET로 반드시 바꿔 주세요.
+	secret: SESSION_SECRET,
 	resave: false,
 	saveUninitialized: true
 }));
@@ -132,7 +137,8 @@ DB.ready = function(){
 	}, 600000);
 	setInterval(function(){
 		gameServers.forEach(function(v){
-			if(v.socket) v.socket.send(`{"type":"seek"}`);
+			// 연결 중(CONNECTING)인 소켓에 send하면 예외가 발생해 웹 서버가 죽는다.
+			if(v.socket && v.socket.readyState == WS.OPEN) v.send('seek');
 			else v.seek = undefined;
 		});
 	}, 4000);
@@ -168,43 +174,58 @@ function GameClient(id, url){
 	var my = this;
 
 	my.id = id;
-	my.socket = new WS(url, { perMessageDeflate: false, rejectUnauthorized: false });
-	
 	my.send = function(type, data){
 		if(!data) data = {};
 		data.type = type;
 
-		my.socket.send(JSON.stringify(data));
-	};
-	my.socket.on('open', function(){
-		JLog.info(`Game server #${my.id} connected`);
-	});
-	my.socket.on('error', function(err){
-		JLog.warn(`Game server #${my.id} has an error: ${err.toString()}`);
-	});
-	my.socket.on('close', function(code){
-		JLog.error(`Game server #${my.id} closed: ${code}`);
-		my.socket.removeAllListeners();
-		delete my.socket;
-	});
-	my.socket.on('message', function(data){
-		var _data = data;
-		var i;
-
-		data = JSON.parse(data);
-
-		switch(data.type){
-			case "seek":
-				my.seek = data.value;
-				break;
-			case "narrate-friend":
-				for(i in data.list){
-					gameServers[i].send('narrate-friend', { id: data.id, s: data.s, stat: data.stat, list: data.list[i] });
-				}
-				break;
-			default:
+		if(!my.socket || my.socket.readyState != WS.OPEN) return false;
+		try{
+			my.socket.send(JSON.stringify(data));
+		}catch(e){
+			return false;
 		}
-	});
+		return true;
+	};
+	function connect(){
+		var socket = my.socket = new WS(url, { perMessageDeflate: false, rejectUnauthorized: false });
+
+		socket.on('open', function(){
+			JLog.info(`Game server #${my.id} connected`);
+		});
+		socket.on('error', function(err){
+			JLog.warn(`Game server #${my.id} has an error: ${err.toString()}`);
+		});
+		socket.on('close', function(code){
+			JLog.error(`Game server #${my.id} closed: ${code}`);
+			socket.removeAllListeners();
+			socket.on('error', function(){});
+			if(my.socket === socket) delete my.socket;
+			my.seek = undefined;
+			// 게임 서버가 재시작되어도 웹 서버를 다시 켜지 않아도 되도록 다시 연결한다.
+			setTimeout(connect, GAME_RECONNECT_DELAY);
+		});
+		socket.on('message', function(data){
+			var i;
+
+			try{
+				data = JSON.parse(data);
+			}catch(e){
+				return JLog.warn(`Invalid message from game server #${my.id}`);
+			}
+			switch(data.type){
+				case "seek":
+					my.seek = data.value;
+					break;
+				case "narrate-friend":
+					for(i in data.list){
+						if(gameServers[i]) gameServers[i].send('narrate-friend', { id: data.id, s: data.s, stat: data.stat, list: data.list[i] });
+					}
+					break;
+				default:
+			}
+		});
+	}
+	connect();
 }
 ROUTES.forEach(function(v){
 	require(`./routes/${v}`).run(Server, WebInit.page);
@@ -219,14 +240,14 @@ Server.get("/", function(req, res){
 			onFinish($ses);
 			// DB.jjo_session.findOne([ '_id', sid ]).limit([ 'profile', true ]).on(onFinish);
 		}else{
-			if($ses) $ses.profile.sid = $ses._id;
+			if($ses && $ses.profile) $ses.profile.sid = $ses._id;
 			onFinish($ses);
 		}
 	});
 	function onFinish($doc){
 		var id = req.session.id;
 
-		if($doc){
+		if($doc && $doc.profile){
 			req.session.profile = $doc.profile;
 			id = $doc.profile.sid;
 		}else{
@@ -274,5 +295,7 @@ Server.get("/servers", function(req, res){
 //볕뉘 수정 구문 삭제(274~353)
 
 Server.get("/legal/:page", function(req, res){
+	// req.params는 URL 디코딩되므로(%2F → /) 다른 경로의 템플릿을 렌더링하지 못하도록 이름을 제한한다.
+	if(!/^[\w\- ]+$/.test(req.params.page)) return res.sendStatus(404);
 	page(req, res, "legal/"+req.params.page);
 })

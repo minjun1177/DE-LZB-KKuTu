@@ -570,7 +570,7 @@ function onMessage(data, sourceSocket){
 			}else if(data.code == 431 || data.code == 432 || data.code == 433){
 				$stage.dialog.room.show();
 			}else if(data.code == 444){
-				i = data.message;
+				i = data.message || "";
 				if(i.indexOf("생년월일") != -1){
 					alert("생년월일이 올바르게 입력되지 않아 게임 이용이 제한되었습니다. 잠시 후 다시 시도해 주세요.");
 					break;
@@ -578,21 +578,13 @@ function onMessage(data, sourceSocket){
 			/* Enhanced User Block System [S] */
 				if(!data.blockedUntil) break;
 				
-				var blockedUntil = new Date(parseInt(data.blockedUntil));
-				var block = "\n제한 시점: " + blockedUntil.getFullYear() + "년 " + blockedUntil.getMonth() + 1 + "월 " +
-				blockedUntil.getDate() + "일 " + blockedUntil.getHours() + "시 " + blockedUntil.getMinutes() + "분까지";
-				
-				alert("[#444] " + L['error_444'] + i + block);
+				alert("[#444] " + L['error_444'] + i + getBlockedUntilText(data.blockedUntil));
 				break;
 			}else if(data.code == 446){
-				i = data.reasonBlocked;
+				i = data.reasonBlocked || "";
 				if(!data.ipBlockedUntil) break;
 				
-				var blockedUntil = new Date(parseInt(data.ipBlockedUntil));
-				var block = "\n제한 시점: " + blockedUntil.getFullYear() + "년 " + blockedUntil.getMonth() + 1 + "월 " +
-				blockedUntil.getDate() + "일 " + blockedUntil.getHours() + "시 " + blockedUntil.getMinutes() + "분까지";
-				
-				alert("[#446] " + L['error_446'] + i + block);
+				alert("[#446] " + L['error_446'] + i + getBlockedUntilText(data.ipBlockedUntil));
 				break;
 			/* Enhanced User Block System [E] */
 			} else if (data.code === 447) {
@@ -1163,7 +1155,7 @@ function normalGameUserBar(o){
 		.append($m = $("<div>").addClass("moremi game-user-image"))
 		.append($("<div>").addClass("game-user-title")
 			.append(getLevelImage(o.data.score).addClass("game-user-level"))
-			.append($bar = $("<div>").addClass("game-user-name ellipse").html(getDisplayName(o)))
+			.append($bar = $("<div>").addClass("game-user-name ellipse").text(getDisplayName(o)))
 			.append($("<div>").addClass("expl").html(L['LEVEL'] + " " + getLevel(o.data.score)))
 		)
 		.append($n = $("<div>").addClass("game-user-score"));
@@ -1179,7 +1171,7 @@ function miniGameUserBar(o){
 	var $R = $("<div>").attr('id', "game-user-"+o.id).addClass("game-user")
 		.append($("<div>").addClass("game-user-title")
 			.append(getLevelImage(o.data.score).addClass("game-user-level"))
-			.append($bar = $("<div>").addClass("game-user-name ellipse").html(getDisplayName(o)))
+			.append($bar = $("<div>").addClass("game-user-name ellipse").text(getDisplayName(o)))
 		)
 		.append($n = $("<div>").addClass("game-user-score"));
 	if(o.id == $data.id) $bar.addClass("game-user-my-name");
@@ -1247,7 +1239,7 @@ function updateRoom(gaming){
 				)
 				.append($("<div>").addClass("room-user-title")
 					.append(getLevelImage(o.data.score).addClass("room-user-level"))
-					.append($bar = $("<div>").addClass("room-user-name").html(getDisplayName(o)))
+					.append($bar = $("<div>").addClass("room-user-name").text(getDisplayName(o)))
 				).on('click', function(e){
 					requestProfile($(e.currentTarget).attr('id').slice(10));
 				})
@@ -1709,7 +1701,7 @@ function updateCommunity(){
 		$stage.dialog.commFriends.append($("<div>").addClass("cf-item").attr('id', "cfi-" + i)
 			.append($("<div>").addClass("cfi-status cfi-stat-" + (o.server ? 'on' : 'off')))
 			.append($("<div>").addClass("cfi-server").html(o.server ? L['server_' + o.server] : "-"))
-			.append($("<div>").addClass("cfi-name ellipse").html(p ? (p.title || p.name) : L['hidden']))
+			.append($("<div>").addClass("cfi-name ellipse").text(p ? (p.title || p.name) : L['hidden']))
 			.append($("<div>").addClass("cfi-memo ellipse").text(memo))
 			.append($("<div>").addClass("cfi-menu")
 				.append($("<i>").addClass("fa fa-pencil").on('click', requestEditMemo))
@@ -1741,7 +1733,9 @@ function requestRoomInfo(id){
 	
 	$data._roominfo = id;
 	$("#RoomInfoDiag .dialog-title").html(id + L['sRoomInfo']);
-	$("#ri-title").html((o.password ? "<i class='fa fa-lock'></i>&nbsp;" : "") + o.title).replaceAll(/\<|\>|\"|\'|\%|\;|\(|\)|\&|\+|\-/g, "");
+	$("#ri-title").empty();
+	if(o.password) $("#ri-title").append($("<i>").addClass("fa fa-lock"), "&nbsp;");
+	$("#ri-title").append(document.createTextNode(badWords(o.title || "")));
 	$("#ri-mode").html(L['mode' + MODE[o.mode]]);
 	$("#ri-round").html(o.round + ", " + o.time + L['SECOND']);
 	$("#ri-limit").html(o.players.length + " / " + o.limit);
@@ -2953,16 +2947,21 @@ function chat(profile, msg, from, timestamp){
 	$stage.chatLog.append($item = $item.clone());
 	$item.append($("<div>").addClass("expl").css('font-weight', "normal").html("#" + (profile.id || "").substr(0, 5)));
 	
-	if(link = msg.match(/https?:\/\/[\w\.\?\/&#%=-_\+]+/g)){
-		msg = $msg.html();
-		link.forEach(function(item){
-			msg = msg.replace(item, "<a href='#' style='color: #2222FF;' onclick='if(confirm(\"" + L['linkWarning'] + "\")) window.open(\"" + item + "\");'>" + item + "</a>");
+	if(link = msg.match(/https?:\/\/[\w\.\?\/&#%=\-\+]+/g)){
+		// 링크 문자열을 HTML/스크립트 문자열에 이어 붙이지 않고 DOM 노드로 만들어 XSS를 막는다.
+		$msg.empty();
+		msg.split(/(https?:\/\/[\w\.\?\/&#%=\-\+]+)/g).forEach(function(part, idx){
+			if(!part) return;
+			if(idx % 2 == 0) return $msg.append(document.createTextNode(part));
+			$msg.append($("<a>").attr('href', "#").css('color', "#2222FF").text(part).on('click', function(e){
+				e.preventDefault();
+				if(confirm(L['linkWarning'])) window.open(part);
+			}));
 		});
-		$msg.html(msg);
 	}
 	if(from){
 		if(from !== true) $data._recentFrom = from;
-		$msg.html("<label style='color: #7777FF; font-weight: bold;'>&lt;" + L['whisper'] + "&gt;</label>" + $msg.html());
+		$msg.prepend($("<label>").css({ 'color': "#7777FF", 'font-weight': "bold" }).text("<" + L['whisper'] + ">"));
 	}
 	addonNickname($bar, { equip: equip });
 	$stage.chat.scrollTop(999999999);
@@ -3080,6 +3079,15 @@ function drawObtain(data){
 	playSound('success');
 	$("#obtain-image").css('background-image', "url(" + iImage(data.key) + ")");
 	$("#obtain-name").html(iName(data.key));
+}
+function getBlockedUntilText(until){
+	var blockedUntil = parseInt(until);
+	
+	if(isNaN(blockedUntil)) return "";
+	if(blockedUntil == -1) return "\n제한 시점: 영구";
+	blockedUntil = new Date(blockedUntil);
+	return "\n제한 시점: " + blockedUntil.getFullYear() + "년 " + (blockedUntil.getMonth() + 1) + "월 " +
+		blockedUntil.getDate() + "일 " + blockedUntil.getHours() + "시 " + blockedUntil.getMinutes() + "분까지";
 }
 function getDisplayName(user){
 	return user.nickname || user.profile.title || user.profile.name;

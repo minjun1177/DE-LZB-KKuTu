@@ -65,10 +65,16 @@ exports.roundReady = function(){
 		my.game.theme = my.opts.injpick[Math.floor(Math.random() * ijl)];
 		getAnswer.call(my, my.game.theme).then(function($ans){
 			if(!my.game.done) return;
+			if(!my.gaming) return;
 			
-			// $ans가 null이면 골치아프다...
+			// 주제에 맞는 문제가 더 없으면(모두 출제됨 등) 게임을 끝낸다. (null 접근으로 서버가 죽던 문제)
+			if(!$ans || !$ans._id){
+				my.game.round = my.round;
+				my.roundEnd();
+				return;
+			}
 			my.game.late = false;
-			my.game.answer = $ans || {};
+			my.game.answer = $ans;
 			my.game.done.push($ans._id);
 			$ans.mean = ($ans.mean.length > 20) ? $ans.mean : getConsonants($ans._id, Math.round($ans._id.length / 2));
 			my.game.hint = getHint($ans);
@@ -401,13 +407,15 @@ function getConsonants(word, lucky){
 }
 function getHint($ans){
 	var R = [];
-	var h1 = $ans.mean.replace(new RegExp($ans._id, "g"), "★");
+	var h1 = $ans.mean.split($ans._id).join("★");
 	var h2;
+	var tries = 0;
 	
 	R.push(h1);
+	// 모든 글자가 한글이 아닌 단어 등은 항상 같은 결과가 나오므로 무한 반복을 막는다.
 	do{
 		h2 = getConsonants($ans._id, Math.ceil($ans._id.length / 2));
-	}while(h1 == h2);
+	}while(h1 == h2 && ++tries < 20);
 	R.push(h2);
 	
 	return R;

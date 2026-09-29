@@ -71,7 +71,7 @@ exports.roundReady = function(){
 	my.game.roundTime = my.time * 1000;
 	if(my.game.round <= my.round){
 		DB.kkutu[my.rule.lang].find([ '_id', conf.reg ], [ 'hit', { $gte: 1 } ], conf.add).limit(1234).on(function($docs){
-			$docs.sort(function(a, b){ return Math.random() < 0.5; });
+			$docs = shuffle($docs);
 			while(w = $docs.shift()){
 				words.push(w._id);
 				i = w._id.length;
@@ -123,10 +123,6 @@ exports.submit = function(client, text, data){
 	if(text.length < (my.opts.no2 ? 3 : 2)){
 		return client.chat(text);
 	}
-	if(my.game.words.indexOf(text) != -1){
-		return client.chat(text);
-	}
-
 	if(my.opts.phonetic && !my.opts.morse && !client.robot){ // LZB - Added Phonetic
 		var phoneticDecoded = decodePhoneticInput(text, my.rule.lang == "ko" ? KO_PHONETIC : EN_PHONETIC);
 		if(!phoneticDecoded) return client.publish('turnError', { code: 459, value: escapeHTML(originalText) }, true);
@@ -158,11 +154,14 @@ exports.submit = function(client, text, data){
 
 	var textlength = text.length
 
+	if(my.game.words.indexOf(text) != -1){
+		return client.chat(text);
+	}
 	if(my.opts.onlylong) if(textlength < ONLYLONG_MIN && !client.robot) return client.chat(escapeHTML(text)); // onlylong
 	if(my.opts.onlyshort && !my.opts.onlylong) if(textlength > ONLYSHORT_MAX && !client.robot) return client.publish('turnError', { code: 411, value: escapeHTML(originalText) }, true); // onlyshort
 
 
-	DB.kkutu[my.rule.lang].findOne([ '_id', text ]).limit([ '_id', true ]).on(function($doc){
+	DB.kkutu[my.rule.lang].findOne([ '_id', text ]).limit([ '_id', true ], [ 'flag', true ]).on(function($doc){
 		if(!my.game.board) return;
 		
 		var newBoard = my.game.board;
@@ -230,7 +229,18 @@ function getBoard(words, len){
 	
 	while(sl++ < len) str.push("　");
 	
-	return str.sort(function(){ return Math.random() < 0.5; }).join("");
+	return shuffle(str).join("");
+}
+function shuffle(arr){
+	// sort()에 true/false를 돌려주는 비교 함수는 거의 섞이지 않아 판에 단어가 그대로 드러난다. (Fisher-Yates)
+	var i, j, t;
+	var r = arr.slice();
+	
+	for(i=r.length-1; i>0; i--){
+		j = Math.floor(Math.random() * (i + 1));
+		t = r[i]; r[i] = r[j]; r[j] = t;
+	}
+	return r;
 }
 function decodeMorseInput(input, morseMap){ // LZB - Added Morse
 	var normalized;

@@ -47,16 +47,22 @@ Pub.ready = function(isPub){
         database: GLOBAL.PG_DATABASE,
 		host: GLOBAL.PG_HOST
     });
+	var pgStarted = false;
+	
 	Redis.on('connect', function(){
 		connectPg();
 	});
 	Redis.on('error', function(err){
 		JLog.error("Error from Redis: " + err);
+		// 이미 DB가 준비된 뒤의 오류(연결 끊김 등)에서 다시 초기화하면 ready가 두 번 불려 포트 중복 사용 등으로 서버가 죽는다.
+		if(pgStarted) return;
 		JLog.alert("Run with no-redis mode.");
 		Redis.quit();
 		connectPg(true);
 	});
 	function connectPg(noRedis){
+		if(pgStarted) return;
+		pgStarted = true;
 		Pg.connect(function(err, pgMain){
 			if(err){
 				JLog.error("Error when connect to PostgreSQL server: " + err.toString());

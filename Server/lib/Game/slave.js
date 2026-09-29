@@ -18,6 +18,7 @@
 
 var WebSocket = require('ws');
 var File = require('fs');
+var Path = require('path');
 var Const = require("../const");
 var https = require('https');
 var Secure = require('../sub/secure');
@@ -96,16 +97,27 @@ function getAutobanReason(reasonKey){
 
 function getClientBlockIp($c){
 	if(!$c) return null;
-	return $c.forwardedIp || $c.remoteAddress || null;
+	// remoteAddress는 WAF / USE_X_FORWARDED_FOR 설정을 반영해 결정된 값이다.
+	return $c.remoteAddress || null;
+}
+function safeSocketSend(socket, text){
+	if(!socket || socket.readyState !== 1) return false;
+	try{
+		socket.send(text);
+		return true;
+	}catch(e){
+		return false;
+	}
 }
 
 function applyAutobanToClient($c, reasonKey){
 	if(!GLOBAL.USE_AUTOBAN) return false;
 	if(!MainDB || !MainDB.ip_block) return false;
+	if(!$c) return false;
 	if($c.admin || (Array.isArray(GLOBAL.ADMIN) && GLOBAL.ADMIN.indexOf($c.id) !== -1)) return false;
 
 	const blockIp = getClientBlockIp($c);
-	if(!$c || !blockIp) return false;
+	if(!blockIp) return false;
 
 	const autoban = GLOBAL.AUTOBAN || {};
 	const reasonText = getAutobanReason(reasonKey);
@@ -128,14 +140,12 @@ function applyAutobanToClient($c, reasonKey){
 		if(typeof DCWH.sendDiscordWebhookOnAutoban === 'function') DCWH.sendDiscordWebhookOnAutoban($c.id, blockIp, reasonText, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 	}
 
-	if($c.socket && $c.socket.readyState === 1){
-		$c.socket.send(JSON.stringify({
-			type: 'error',
-			code: 446,
-			reasonBlocked: reasonBlocked,
-			ipBlockedUntil: ipBlockedUntil
-		}));
-	}
+	safeSocketSend($c.socket, JSON.stringify({
+		type: 'error',
+		code: 446,
+		reasonBlocked: reasonBlocked,
+		ipBlockedUntil: ipBlockedUntil
+	}));
 	if($c.socket) $c.socket.close();
 
 	JLog.info(`[AutoBan] IP ${blockIp} blocked for ${$c.id} (${reasonText})`);
@@ -171,7 +181,7 @@ process.on('uncaughtException', function(err){
 	for(var i in DIC){
 		DIC[i].send('dying');
 	}
-	File.appendFile("../KKUTU_ERROR.log", text, function(res){
+	File.appendFile(Path.resolve(__dirname, "../../../KKUTU_ERROR.log"), text + "\n", function(res){
 		JLog.error(`ERROR OCCURRED! This worker will die in 10 seconds.`);
 		console.log(text);
 	});
@@ -243,35 +253,16 @@ Server.on('connection', function(socket, info){
 		$c.admin = GLOBAL.ADMIN.indexOf($c.id) != -1;
 		
 		/* Enhanced User Block System [S] */
-		var forwardedTo = info.headers['x-forward-to'];
 		var forwardedFor = info.headers['x-forwarded-for'];
-		var forwardedToIp = forwardedTo ? forwardedTo.split(',')[0].trim() : null;
 		var forwardedIp = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
 		var cfConnectingIp = info.headers['cf-connecting-ip'];
 		$c.forwardedIp = forwardedIp || null;
 		if(GLOBAL.WAF){
-			$c.remoteAddress = forwardedToIp || forwardedIp || info.connection.remoteAddress;
+			$c.remoteAddress = cfConnectingIp || forwardedIp || info.connection.remoteAddress;
 		}else{
 			$c.remoteAddress = GLOBAL.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
 				? (cfConnectingIp || forwardedIp || info.connection.remoteAddress)
 				: info.connection.remoteAddress;
-		}
-		if(GLOBAL.USER_BLOCK_OPTIONS.USE_MODULE && ((GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) || !GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)){
-			var blockIp = getClientBlockIp($c);
-			if(!blockIp) return;
-			MainDB.ip_block.findOne([ '_id', blockIp ]).on(function($body){
-				if ($body && $body.reasonBlocked) {
-					$c.socket.send(JSON.stringify({
-						type: 'error',
-						code: 446,
-						reasonBlocked: !$body.reasonBlocked ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT : $body.reasonBlocked,
-						ipBlockedUntil: !$body.ipBlockedUntil ? GLOBAL.USER_BLOCK_OPTIONS.BLOCKED_FOREVER : $body.ipBlockedUntil
-					}));
-					$c.socket.close();
-					DCWH.sendDiscordWebhookOnJoinBaneduser($c.id, blockIp, !$body.reasonBlocked ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT : $body.reasonBlocked, $body.ipBlockedUntil || "Unknown", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
-					return;
-				}
-			});
 		}
 		/* Enhanced User Block System [E] */
 		if(DIC[$c.id]){
@@ -283,7 +274,9 @@ Server.on('connection', function(socket, info){
 			$c.socket.close();
 			return;
 		}
+		checkIpBlock($c, function(){
 		$c.refresh().then(function(ref){
+			if($c.socket.readyState !== 1) return;
 			if(ref.result == 200){
 				DIC[$c.id] = $c;
 				DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] = $c.id;
@@ -303,8 +296,38 @@ Server.on('connection', function(socket, info){
 				$c.socket.close();
 			}
 		});
+		});
 	});
 });
+/* Enhanced User Block System [S] */
+function checkIpBlock($c, next){
+	var opts = GLOBAL.USER_BLOCK_OPTIONS || {};
+	var blockIp;
+
+	if(!opts.USE_MODULE) return next();
+	if(opts.BLOCK_IP_ONLY_FOR_GUEST && !$c.guest) return next();
+	if(!(blockIp = getClientBlockIp($c))) return next();
+
+	MainDB.ip_block.findOne([ '_id', blockIp ]).on(function($body){
+		var ipBlockedUntil, reasonBlocked;
+
+		if(!$body || !$body.reasonBlocked) return next();
+		ipBlockedUntil = Number($body.ipBlockedUntil);
+		if(isNaN(ipBlockedUntil)) ipBlockedUntil = 0;
+		// 기한이 지난 차단은 마스터가 접속 시 해제하므로 여기서는 유효한 차단만 막는다.
+		if(ipBlockedUntil !== -1 && ipBlockedUntil <= Date.now()) return next();
+		reasonBlocked = $body.reasonBlocked || opts.DEFAULT_BLOCKED_TEXT;
+		safeSocketSend($c.socket, JSON.stringify({
+			type: 'error',
+			code: 446,
+			reasonBlocked: reasonBlocked,
+			ipBlockedUntil: ipBlockedUntil
+		}));
+		$c.socket.close();
+		DCWH.sendDiscordWebhookOnJoinBaneduser($c.id, blockIp, reasonBlocked, $body.ipBlockedUntil || "Unknown", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+	});
+}
+/* Enhanced User Block System [E] */
 Server.on('error', function(err){
 	JLog.warn("Error on ws: " + err.toString());
 });
@@ -370,6 +393,7 @@ KKuTu.onClientMessage = function($c, msg){
 					}
 				}
 				if(msg.whisper){
+					if(typeof msg.whisper !== 'string') return;
 					process.send({ type: "tail-report", id: $c.id, chan: CHAN, place: $c.place, msg: msg });
 					msg.whisper.split(',').forEach(v => {
 						if(temp = DIC[DNAME[v]]){
@@ -403,8 +427,10 @@ KKuTu.onClientMessage = function($c, msg){
 			if(isNaN(msg.time)) stable = false;
 			
 			if(stable){
-				if(msg.title.length > 20) stable = false;
-				if(msg.password.length > 20) stable = false;
+				if(typeof msg.title !== 'string' || msg.title.length > 20) stable = false;
+				if(msg.password === undefined || msg.password === null) msg.password = "";
+				if(typeof msg.password !== 'string' || msg.password.length > 20) stable = false;
+				if(typeof msg.opts !== 'object') stable = false;
 				if(msg.limit < 2 || msg.limit > 8){
 					msg.code = 432;
 					stable = false;
@@ -524,6 +550,7 @@ KKuTu.onClientMessage = function($c, msg){
 			break;
 		case 'wp':
 			if(!msg.value) return;
+			if(typeof msg.value !== 'string') return;
 			if(!GUEST_PERMISSION.wp) if($c.guest){
 				$c.send('error', { code: 401 });
 				return;
@@ -550,9 +577,16 @@ KKuTu.onClientMessage = function($c, msg){
 	}
 };
 KKuTu.onClientClosed = function($c, code){
-	delete DIC[$c.id];
-	if($c.profile) delete DNAME[$c.profile.title || $c.profile.name];
+	var name;
+
 	if($c.socket) $c.socket.removeAllListeners();
+	// 같은 계정이 다시 접속해 DIC가 새 클라이언트로 바뀐 경우(408), 새 클라이언트의 정보를 지우면 안 된다.
+	if(DIC[$c.id] !== $c) return;
+	delete DIC[$c.id];
+	if($c.profile){
+		name = ($c.profile.title || $c.profile.name || "").replace(/\s/g, "");
+		if(DNAME[name] == $c.id) delete DNAME[name];
+	}
 	KKuTu.publish('disconnRoom', { id: $c.id });
 
 	JLog.alert(`Chan @${CHAN} Exit #${$c.id}`);

@@ -42,7 +42,8 @@ echo Waiting for services to become healthy (up to %HEALTH_TIMEOUT%s; first boot
 set /a WAITED=0
 :waitloop
 REM A healthy 'web' implies db, redis and game are healthy (dependency chain).
-%COMPOSE% ps | findstr "web" | findstr "healthy" >nul 2>&1
+REM "(healthy)" must match literally: a bare "healthy" also matches "(unhealthy)".
+%COMPOSE% ps | findstr "web" | findstr /C:"(healthy)" >nul 2>&1
 if not errorlevel 1 goto :healthy
 if %WAITED% geq %HEALTH_TIMEOUT% goto :health_timeout
 <nul set /p "=."

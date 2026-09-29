@@ -86,7 +86,8 @@ Electron 런처와 시작 스크립트가 사용합니다.
 
 | 키 | 타입 | 의미 |
 |----|------|------|
-| `NICKNAME_LIMIT` | number | 닉네임 변경 쿨다운 / 제한 (포털 + `routes/major.js`에서 사용) |
+| `NICKNAME_LIMIT` | object | `{ "TERM": <닉네임 변경 간격(일), 0이면 제한 없음>, "REGEX": [ "<금지 문자 정규식>", "<플래그>" ] }`. 클라이언트와 `routes/major.js`(`/profile`)에서 검사 |
+| `SESSION_SECRET` | string | 웹 세션 쿠키 서명 키. **길고 임의의 문자열로 꼭 설정하세요** (환경 변수 `KKT_SESSION_SECRET`도 가능). 기본값 `kkutu`는 공개된 값입니다 |
 | `SEASON` | any | 현재 시즌 표시 (`sub/webinit.js`) |
 | `SEASON_PRE` | any | 프리시즌 표시 (`sub/webinit.js`) |
 | `KKUTUHOT_PATH` | string | 인기 단어 데이터 파일 경로 (`routes/admin.js`, `Server/data/kkutuhot.json` 참고) |
@@ -137,7 +138,8 @@ Electron 런처와 시작 스크립트가 사용합니다.
     "PG_PORT": 5432,
     "PG_DATABASE": "main",
 
-    "NICKNAME_LIMIT": 7,
+    "NICKNAME_LIMIT": { "TERM": 7, "REGEX": [ "[\\{\\}\\[\\]\\/?.,;:|\\)*~`!^\\-+<>@#$%&\\\\=\\(\\'\"]", "gi" ] },
+    "SESSION_SECRET": "change-me-to-a-long-random-string",
 
     "USE_AUTOBAN": false,
     "USE_DISCORD_WEBHOOK": false

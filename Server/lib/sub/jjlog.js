@@ -30,24 +30,29 @@ async function sendDiscordWebhookOnJLog(whurl, type, message, color) {
 	const shouldSendWebhook = UseDiscordWebhook && (SEND_WEBHOOK_AT_JLOG || (type === "Error" && MENTION_ON_ERROR));
 	if (!shouldSendWebhook) return;
 	const shouldMentionHere = type === "Error" && MENTION_ON_ERROR;
-	const dcwhclient = new WebhookClient({ url: whurl });
-	const dcwhembed = new EmbedBuilder()
-		.setTitle("JLog Alert")
-		.addFields(
-			{ name: "Type", value: type },
-			{ name: "Message", value: `\`\`\`${message}\`\`\` ${shouldMentionHere ? "@here" : ""}` },
-			{ name: "Time", value: new Date().toLocaleString() }
-		)
-		.setColor(color)
-		.setTimestamp();
+	// 이 함수 안에서 발생한 오류는 처리되지 않은 Promise 거부가 되어 프로세스를 종료시킬 수 있으므로 모두 잡는다.
+	// (임베드 필드는 1024자 제한이 있어 긴 오류 메시지를 그대로 넣으면 예외가 발생한다)
 	try {
+		let text = String(message == null ? "" : message);
+		if (text.length > 900) text = text.slice(0, 897) + "...";
+		const dcwhclient = new WebhookClient({ url: whurl });
+		const dcwhembed = new EmbedBuilder()
+			.setTitle("JLog Alert")
+			.addFields(
+				{ name: "Type", value: type },
+				{ name: "Message", value: `\`\`\`${text || "(empty)"}\`\`\` ${shouldMentionHere ? "@here" : ""}` },
+				{ name: "Time", value: new Date().toLocaleString() }
+			)
+			.setColor(color)
+			.setTimestamp();
 		await dcwhclient.send({
 			username: JLog_wh_nickname || 'JLog Alert',
 			avatarURL: GLOBAL.DISCORD_AVATAR || 'https://i.imgur.com/AfFp7pu.png', // default discord js avatar
 			embeds: [dcwhembed]
 		});
 	} catch (error) {
-		JLog.warn(`Failed to send Discord webhook: ${error}`);
+		// JLog.warn을 부르면 다시 이 함수로 들어오므로 콘솔에만 남긴다. (예전에는 정의되지 않은 JLog를 참조해 오류가 났다)
+		callLog(`Failed to send Discord webhook: ${error}`);
 	}
 }
 // Discord Webhook [E]

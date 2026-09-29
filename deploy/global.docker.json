@@ -8,6 +8,7 @@
 	"GAME_SERVER_HOST": "game",
 	"KKUTUHOT_PATH": "/tmp/kkutuhot.json",
 	"PASS": "kkutu-test-admin-pass",
+	"SESSION_SECRET": "kkutu-test-session-secret-change-me",
 	"PG_HOST": "db",
 	"PG_USER": "postgres",
 	"PG_PASSWORD": "kkutu-test-pg",
