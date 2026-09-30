@@ -191,7 +191,7 @@ API를 구성합니다. Redis 실패 시 "no-redis 모드"(`FAKE_REDIS`)로 폴�
    |------|------|------|
    | `classic.js`   | Classic   | 표준 끝말잇기 |
    | `crossword.js` | Crossword | 십자말풀이식 한국어 단어 유추 |
-   | `cw_maker.js`  | —         | 십자말풀이 퍼즐 생성 헬퍼 |
+   | `cw_maker.js`  | —         | 십자말풀이 판 생성·점검 CLI (`--help`) |
    | `daneo.js`     | Daneo     | 단어대결 모드 |
    | `hunmin.js`    | Hunmin    | 초성(훈민정음) 퀴즈 |
    | `jaqwi.js`     | Jaqwi     | 주제별 자음 퀴즈(자음퀴즈) |
