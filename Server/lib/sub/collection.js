@@ -312,7 +312,8 @@ exports.Agent = function(type, origin){
 							// 영향받은 행 수를 확인할 수 있도록 배열에 rowCount를 붙여 둔다. (낙관적 잠금 등에 사용)
 							var rowCount = res.rowCount;
 							res = res.rows;
-							res.rowCount = rowCount;
+							// for...in 으로 결과를 도는 코드가 많으므로 열거되지 않는 속성으로 붙인다.
+							Object.defineProperty(res, 'rowCount', { value: rowCount, enumerable: false });
 						}
 					}
 					callback(err, res);
