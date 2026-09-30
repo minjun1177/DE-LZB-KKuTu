@@ -28,6 +28,10 @@ var Language = {
 	'en_US': require("../Web/lang/en_US.json")
 };
 
+const DEFAULT_LOCALE = "ko_KR";
+const LOCALE_COOKIE = "kkt_locale";
+const LOCALE_NAMES = { 'ko_KR': "한국어", 'en_US': "English" };
+
 for(let lang in Language) updateThemes(lang);
 
 function updateThemes(lang){
@@ -71,6 +75,60 @@ function hasPublicFile(rel){
 		return false;
 	}
 }
+function getCookie(req, name){
+	var list = String(req.headers.cookie || "").split(/;\s*/);
+	var i, eq;
+	
+	for(i in list){
+		eq = list[i].indexOf("=");
+		if(eq > 0 && list[i].slice(0, eq) == name){
+			try{
+				return decodeURIComponent(list[i].slice(eq + 1));
+			}catch(e){
+				return null;
+			}
+		}
+	}
+	return null;
+}
+function setLocaleCookie(res, lang){
+	res.append('Set-Cookie', `${LOCALE_COOKIE}=${lang}; Path=/; Max-Age=31536000; SameSite=Lax`);
+}
+// 언어는 ?locale= 로 고르면 쿠키에 저장해, 이후 이동(게임 시작, 로그인 등)에서 locale이 URL에서 빠져도 유지한다.
+function resolveLocale(req, res){
+	var q = req.query.locale;
+	var c;
+	
+	if(typeof q == 'string' && Language[q]){
+		if(getCookie(req, LOCALE_COOKIE) != q) setLocaleCookie(res, q);
+		return q;
+	}
+	c = getCookie(req, LOCALE_COOKIE);
+	if(c && Language[c]) return c;
+	return DEFAULT_LOCALE;
+}
+// 현재 주소에서 locale 매개변수만 뺀 경로 (언어 전환 뒤 같은 페이지로 돌아오기 위해 사용)
+function getReturnPath(req){
+	var url;
+	
+	try{
+		url = new URL(req.originalUrl, "http://localhost");
+	}catch(e){
+		return "/";
+	}
+	url.searchParams.delete('locale');
+	return url.pathname + url.search;
+}
+function isSafeReturnPath(path){
+	return typeof path == 'string' && /^\/(?![\/\\])/.test(path);
+}
+function getLocaleSwitch(req, current){
+	var next = encodeURIComponent(getReturnPath(req));
+	
+	return Object.keys(LOCALE_NAMES).filter(function(code){ return Language[code]; }).map(function(code){
+		return { code: code, name: LOCALE_NAMES[code], current: code == current, href: `/locale/${code}?next=${next}` };
+	});
+}
 function isInternalIp(ip){
 	if(!ip) return false;
 	var normalized = String(ip).trim().toLowerCase();
@@ -96,12 +154,12 @@ function page(req, res, file, data){
 	var sid = req.session.id || "";
 	
 	data.published = global.isPublic;
-	data.lang = req.query.locale || "ko_KR";
-	if(!Language[data.lang]) data.lang = "ko_KR";
+	data.lang = resolveLocale(req, res);
+	data.langSwitch = getLocaleSwitch(req, data.lang);
 
 	if(GLOBAL.WAF && !cfConnectingIp && !isInternalIp(addr)) return res.status(403).send("Direct ip connection is not allowed.");
 
-	// URL ...?locale=en_US will show the page in English
+	// URL ...?locale=en_US (또는 /locale/en_US) 로 언어를 바꾸면 쿠키에 저장되어 계속 유지된다.
 	
 	// if(exports.STATIC) data.static = exports.STATIC[data.lang];
 	data.season = GLOBAL.SEASON;
@@ -142,6 +200,14 @@ exports.init = function(Server, shop){
 		if(page.substr(0, 2) == "m/") page = page.slice(2);
 			if(page == "portal" || page == "v2") page = "kkutu";
 		res.send("window.L = "+JSON.stringify(getLanguage(lang, page, shop))+";");
+	});
+	// 언어 전환: 쿠키에 저장하고 원래 보던 페이지로 돌아간다. (다른 사이트로의 이동은 허용하지 않는다)
+	Server.get("/locale/:lang", function(req, res){
+		var lang = req.params.lang;
+		var next = req.query.next;
+		
+		if(Language[lang]) setLocaleCookie(res, lang);
+		res.redirect(isSafeReturnPath(next) ? next : "/");
 	});
 	Server.get("/language/flush", function(req, res){
 		// 누구나 언어 파일을 다시 읽게 할 수 없도록 관리자 또는 내부망에서만 허용한다.

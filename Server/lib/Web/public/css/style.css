@@ -144,6 +144,14 @@ span{
 	transition: color 300ms ease;
 }
 #account-info:hover{ color: #EEEEEE; }
+/* 언어 전환 (상단 메뉴) */
+#lang-switch{ float: left; padding-top: 8px; margin-right: 12px; font-size: 12px; white-space: nowrap; }
+	#lang-switch .fa{ margin-right: 2px; }
+	#lang-switch .lang-item{ margin-left: 6px; }
+	#lang-switch a.lang-item{ color: #444444; text-decoration: underline; cursor: pointer; }
+	#lang-switch a.lang-item:hover{ color: #EEEEEE; }
+	#lang-switch .lang-current{ color: #222222; font-weight: bold; }
+
 #global-notice{
 	margin-top: 30px;
 	color: #111111;

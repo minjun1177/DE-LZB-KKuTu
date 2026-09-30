@@ -78,6 +78,8 @@ $(document).ready(function(){
 	$data.PUBLIC = $("#PUBLIC").html() == "true";
 	$data.URL = $("#URL").html();
 	$data.ROOM_PORT = $("#ROOM_PORT").html();
+	// 페이지를 그린 언어 (URL에 locale이 없어도 쿠키로 정해진 언어가 들어 있다)
+	$data.locale = $("#LOCALE_CODE").text() || "ko_KR";
 	try{
 		$data.NICKNAME_LIMIT = JSON.parse($("#NICKNAME_LIMIT").text());
 	}catch(e){
@@ -3035,9 +3037,7 @@ function sendWhisper(target, text){
 	}
 }
 function toggleWhisperBlock(target){
-	var localeMatch = location.href.match(/[?&]locale=([^&]+)/);
-	$data.locale = localeMatch ? localeMatch[1] : 'ko_KR'; // 기본값: ko_KR
-	if($data.locale.startsWith('en')){
+	if(($data.locale || 'ko_KR').startsWith('en')){
 		if($data._wblock.hasOwnProperty(target)){
 			delete $data._wblock[target];
 			notice(L['wnblocked'] + target);
@@ -3056,9 +3056,7 @@ function toggleWhisperBlock(target){
 	}
 }
 function toggleShutBlock(target){
-	var localeMatch = location.href.match(/[?&]locale=([^&]+)/);
-	$data.locale = localeMatch ? localeMatch[1] : 'ko_KR'; // 기본값: ko_KR
-	if($data.locale.startsWith('en')){
+	if(($data.locale || 'ko_KR').startsWith('en')){
 		if($data._shut.hasOwnProperty(target)){
 			delete $data._shut[target];
 			notice(L['userNShut'] + target);

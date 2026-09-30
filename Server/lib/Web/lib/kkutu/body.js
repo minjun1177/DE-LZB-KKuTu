@@ -712,9 +712,7 @@ function sendWhisper(target, text){
 	}
 }
 function toggleWhisperBlock(target){
-	var localeMatch = location.href.match(/[?&]locale=([^&]+)/);
-	$data.locale = localeMatch ? localeMatch[1] : 'ko_KR'; // 기본값: ko_KR
-	if($data.locale.startsWith('en')){
+	if(($data.locale || 'ko_KR').startsWith('en')){
 		if($data._wblock.hasOwnProperty(target)){
 			delete $data._wblock[target];
 			notice(L['wnblocked'] + target);
@@ -733,9 +731,7 @@ function toggleWhisperBlock(target){
 	}
 }
 function toggleShutBlock(target){
-	var localeMatch = location.href.match(/[?&]locale=([^&]+)/);
-	$data.locale = localeMatch ? localeMatch[1] : 'ko_KR'; // 기본값: ko_KR
-	if($data.locale.startsWith('en')){
+	if(($data.locale || 'ko_KR').startsWith('en')){
 		if($data._shut.hasOwnProperty(target)){
 			delete $data._shut[target];
 			notice(L['userNShut'] + target);
