@@ -54,7 +54,8 @@ exports.getTitle = function(){
 		
 		while(left){
 			pick = $box[pi = Math.floor(Math.random() * $box.length)];
-			if(!pick) return;
+			// 남은 판이 없으면 가진 판만으로 진행한다. (그냥 return하면 게임이 영원히 시작되지 않는다)
+			if(!pick) break;
 			$box.splice(pi, 1);
 			if(maps.includes(pick.map)) continue;
 			means.push({});
@@ -193,6 +194,14 @@ exports.submit = function(client, text, data){
 		composedText = composeHangulInput(text);
 		if(composedText) text = composedText;
 	}
+	checkAnswer.call(my, client, text, data, play);
+};
+function checkAnswer(client, text, data, play){
+	var my = this;
+	var obj, score, mbjs, mbj, jx, jy, v;
+	var i, j, key;
+
+	if(!my.game.answers || !my.game.mdb) return;
 	if(data && play){
 		key = `${data[0]},${data[1]},${data[2]},${data[3]}`;
 		obj = my.game.answers[key];
@@ -209,7 +218,8 @@ exports.submit = function(client, text, data){
 					for(j in mbj){
 						key = [ data[0], mbj[j].x, mbj[j].y, mbj[j].dir ];
 						if(++mbj[j].count == mbj[j].len){
-							if(v = my.game.answers[key.join(',')]) setTimeout(my.submit, 1, client, v, key);
+							// 이미 해석된 정답이므로 모스/음성 기호 해석을 다시 거치지 않도록 checkAnswer를 바로 부른다.
+							if(v = my.game.answers[key.join(',')]) setTimeout(function(v, key){ checkAnswer.call(my, client, v, key, true); }, 1, v, key);
 						}
 					}
 				}
@@ -231,7 +241,7 @@ exports.submit = function(client, text, data){
 	}else{
 		client.chat(text);
 	}
-};
+}
 exports.getScore = function(text, delay){
 	var my = this;
 	var rank = my.game.hum - my.game.primary + 3;

@@ -56,6 +56,7 @@ block Jungle
 	// span#PORT= locals.PORT
 	span#URL= `${locals.PROTOCOL}://${locals.HOST}:${locals.PORT}/${locals._id}`
 	span#ROOM_PORT= locals.ROOM_PORT
+	span#LOCALE_CODE= locals.lang
 	span#MOREMI_PART= locals.MOREMI_PART.join(',')
 	span#AVAIL_EQUIP= locals.AVAIL_EQUIP.join(',')
 	span#NICKNAME_LIMIT= locals.NICKNAME_LIMIT ? JSON.stringify(locals.NICKNAME_LIMIT) : "{}"
@@ -168,17 +169,34 @@ block Middle
 			button#lb-next(style='margin-right: 6px;')= L('nextPage')
 			button#lb-me= L('myRank')
 			button#lb-prev= L('prevPage')
-	+Dialog('QuickDiag', 300, 230, L('quickRoom'))
+	//- 방 만들기 창(RoomDiag)처럼 특수 규칙이 늘어난 만큼 창과 규칙 영역을 키운다. (예전 크기로는 규칙이 창 밖으로 넘쳤다)
+	+Dialog('QuickDiag', 300, 340, L('quickRoom'))
 		div.dialog-bar
 			h4= L('gameMode')
 			select#quick-mode
-				- for(var i in locals.MODE)
-					option(value=Number(i))= L('mode' + locals.MODE[i])
-		div.dialog-bar(style='height: 59px;')
-			h4(style='height: 45px;')= L('misc')
+				optgroup(label=L('mcKorean'))
+					option(value=3)= L('modeKSH')
+					option(value=2)= L('modeKKT')
+					option(value=8)= L('modeKAP')
+					option(value=6)= L('modeKTY')
+					option(value=10)= L('modeKDA')
+					option(value=5)= L('modeKCW')
+					option(value=12)= L('modeKSS')
+					option(value=4)= L('modeCSQ')
+					option(value=9)= L('modeHUN')
+					option(value=14)= L('modeKDG')
+				optgroup(label=L('mcEnglish'))
+					option(value=1)= L('modeESH')
+					option(value=0)= L('modeEKT')
+					option(value=7)= L('modeETY')
+					option(value=11)= L('modeEDA')
+					option(value=13)= L('modeESS')
+					option(value=15)= L('modeEDG')
+		div.dialog-bar(style='height: 150px;')
+			h4(style='height: 150px;')= L('misc')
 			- for(var i in locals.OPTIONS)
 				+GameOption(i, 'quick')
-		div.dialog-bar
+		div.dialog-bar#quickstat
 			h4(style='width: 100%; height: 20px;')#quick-status
 		div.dialog-bar
 			h4(style='width: 100%; height: 20px;')#quick-queue

@@ -110,10 +110,16 @@ Server.get("/gwalli/kkututheme", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	
 	var TABLE = MainDB.kkutu[req.query.lang];
+	var themeReg;
 	
 	if(!TABLE) return res.sendStatus(400);
 	if(!TABLE.find) return res.sendStatus(400);
-	TABLE.find([ 'theme', new RegExp(req.query.theme) ]).limit([ '_id', true ]).on(function($docs){
+	try{
+		themeReg = new RegExp(req.query.theme);
+	}catch(e){
+		return res.sendStatus(400);
+	}
+	TABLE.find([ 'theme', themeReg ]).limit([ '_id', true ]).on(function($docs){
 		res.send({ list: $docs.map(v => v._id) });
 	});
 });
@@ -121,7 +127,11 @@ Server.get("/gwalli/kkutuhot", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	
 	File.readFile(GLOBAL.KKUTUHOT_PATH, function(err, file){
-		var data = JSON.parse(file.toString());
+		var data = {};
+		
+		if(!err){
+			try{ data = JSON.parse(file.toString()); }catch(e){ data = {}; }
+		}
 		
 		parseKKuTuHot().then(function($kh){
 			res.send({ prev: data, data: $kh });
@@ -143,8 +153,10 @@ Server.post("/gwalli/injeong", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	if(req.body.pw != GLOBAL.PASS) return res.sendStatus(400);
 	
-	var list = JSON.parse(req.body.list).list;
+	var list = parseList(req.body.list);
 	var themes;
+	
+	if(!list) return res.sendStatus(400);
 	
 	list.forEach(function(v){
 		if(v.ok){
@@ -204,8 +216,14 @@ Server.post("/gwalli/kkutudb/:word", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	if(req.body.pw != GLOBAL.PASS) return res.sendStatus(400);
 	var TABLE = MainDB.kkutu[req.body.lang];
-	var data = JSON.parse(req.body.data);
+	var data;
 	
+	try{
+		data = JSON.parse(req.body.data);
+	}catch(e){
+		return res.sendStatus(400);
+	}
+	if(!data || !data._id) return res.sendStatus(400);
 	if(!TABLE) return res.sendStatus(400);
 	if(!TABLE.upsert) return res.sendStatus(400);
 	
@@ -242,8 +260,9 @@ Server.post("/gwalli/users", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	if(req.body.pw != GLOBAL.PASS) return res.sendStatus(400);
 	
-	var list = JSON.parse(req.body.list).list;
+	var list = parseList(req.body.list);
 	
+	if(!list) return res.sendStatus(400);
 	list.forEach(function(item){
 		MainDB.users.upsert([ '_id', item._id ]).set(item).on();
 	});
@@ -253,10 +272,17 @@ Server.post("/gwalli/shop", function(req, res){
 	if(!checkAdmin(req, res)) return;
 	if(req.body.pw != GLOBAL.PASS) return res.sendStatus(400);
 	
-	var list = JSON.parse(req.body.list).list;
+	var list = parseList(req.body.list);
 	
+	if(!list) return res.sendStatus(400);
+	try{
+		list.forEach(function(item){
+			item.core.options = JSON.parse(item.core.options);
+		});
+	}catch(e){
+		return res.sendStatus(400);
+	}
 	list.forEach(function(item){
-		item.core.options = JSON.parse(item.core.options);
 		MainDB.kkutu_shop.upsert([ '_id', item._id ]).set(item.core).on();
 		MainDB.kkutu_shop_desc.upsert([ '_id', item._id ]).set(item.text).on();
 	});
@@ -264,6 +290,16 @@ Server.post("/gwalli/shop", function(req, res){
 });
 
 };
+function parseList(text){
+	var list;
+	
+	try{
+		list = JSON.parse(text).list;
+	}catch(e){
+		return null;
+	}
+	return Array.isArray(list) ? list : null;
+}
 function noticeAdmin(req, ...args){
 	JLog.info(`[ADMIN] ${req.originalUrl} ${req.ip} | ${args.join(' | ')}`);
 }

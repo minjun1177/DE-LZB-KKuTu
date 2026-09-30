@@ -452,7 +452,8 @@ exports.getScore = function(text, delay, ignoreMission){
 	score = Const.getPreScore(text, my.game.chain, tr);
 	
 	if(my.game.dic[text]) score *= 15 / (my.game.dic[text] + 15);
-	if(!ignoreMission) if(arr = text.match(new RegExp(my.game.mission, "g"))){
+	// 미션이 없을 때(null 등) new RegExp(null)은 "null"과 일치하므로 문자열 미션일 때만 검사한다.
+	if(!ignoreMission && typeof my.game.mission == "string" && my.game.mission.length) if(arr = text.match(new RegExp(my.game.mission.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "g"))){
 		score += score * 0.5 * arr.length;
 		my.game.mission = true;
 	}
@@ -614,7 +615,9 @@ exports.readyRobot = function(robot){
 	function getWish(char){
 		var R = new Lizard.Tail();
 		
-		DB.kkutu[my.rule.lang].find([ '_id', new RegExp(isRev ? `.${char}$` : `^${char}.`) ]).limit(10).on(function($res){
+		var ec = escapeRegExp(char);
+		
+		DB.kkutu[my.rule.lang].find([ '_id', new RegExp(isRev ? `.${ec}$` : `^${ec}.`) ]).limit(10).on(function($res){
 			R.go({ char: char, length: $res.length });
 		});
 		return R;
@@ -731,7 +734,8 @@ function getAuto(char, subc, type){
 		}
 		DB.kkutu[my.rule.lang].find.apply(this, aqs).limit(bool ? 1 : 123).on(function($md){
 			forManner($md);
-			if(my.game.chain) aft($md.filter(function(item){ return !my.game.chain.includes(item); }));
+			// 존재 여부(type 1)는 limit 1로 조회하므로 걸러내지 않는다. 힌트/로봇 목록에서는 이미 쓴 단어를 제외한다.
+			if(my.game.chain && !bool) aft($md.filter(function(item){ return !my.game.chain.includes(item._id); }));
 			else aft($md);
 		});
 		function forManner(list){

@@ -22,6 +22,7 @@ var JLog	 = require("../../sub/jjlog");
 var GLOBAL	 = require("../../sub/global.json");
 var Const	 = require("../../const");
 var DB		 = require("../db");
+var UserLock = require("../../sub/userlock");
 
 var ENHANCE_COST = 160; // 강화할때 드는 돈
 var ENHANCE_SUCCESS_RATE = 0.06; // 6% 누군가가 0.6%를 제안했는데 그렇게 낮출 필요는 없어 보인다, 하지만 어느 게임에서는 서서히 낮아지고 심지어는 파괴가 된다고는 하는데 일단 고정
@@ -51,6 +52,38 @@ function consume($user, key, value, force){
 	}else{
 		if(($user.box[key] -= value) <= 0) delete $user.box[key];
 	}
+}
+function getNicknameFilter(){
+	var r = GLOBAL.NICKNAME_LIMIT && GLOBAL.NICKNAME_LIMIT.REGEX;
+	
+	if(!Array.isArray(r) || !r[0]) return null;
+	try{
+		return new RegExp(r[0], r[1] || "");
+	}catch(e){
+		JLog.warn(`Invalid NICKNAME_LIMIT.REGEX: ${e}`);
+		return null;
+	}
+}
+function shuffle(arr){
+	var i, j, t;
+	var r = arr.slice();
+	
+	for(i=r.length-1; i>0; i--){
+		j = Math.floor(Math.random() * (i + 1));
+		t = r[i]; r[i] = r[j]; r[j] = t;
+	}
+	return r;
+}
+// 돈이 바뀌는 요청은 읽었을 때의 돈이 그대로일 때만 저장한다. (동시 요청으로 돈/아이템이 복사되는 것을 막는다)
+function updateUserMoney(uid, prevMoney, sets, res, callback){
+	var q = MainDB.users.update([ '_id', uid ], [ 'money', prevMoney ]);
+	
+	q.set.apply(q, sets).on(function($res){
+		if($res && $res.rowCount === 0) return res.json({ error: 400 });
+		callback();
+	}, null, function(){
+		res.json({ error: 400 });
+	});
 }
 function getEnhanceableOptions(options){
 	var key;
@@ -271,17 +304,26 @@ Server.get("/v3", function(req, res){
 Server.post("/profile", function(req, res){
 	let nickname = req.body.nickname;
 	const exordial = req.body.exordial;
+	const filter = getNicknameFilter();
 
 	if(!req.session.profile) return res.send({ error: 400 });
+	// body-parser(extended)는 배열/객체도 만들 수 있으므로 문자열만 받는다.
+	if(exordial !== undefined && typeof exordial !== 'string') return res.send({ error: 400 });
+	if(nickname !== undefined && typeof nickname !== 'string') return res.send({ error: 400 });
 	
 	if(exordial !== undefined) MainDB.users.update([ '_id', req.session.profile.id ]).set([ 'exordial', exordial.slice(0, 100) ]).on();
 	if(!nickname) return res.send({ result: 200 });
 
-	if(nickname.length > 12) nickname = nickname.slice(0, 12);
+	// 클라이언트에서만 하던 닉네임 규칙 검사를 서버에서도 한다. (HTML 특수문자 등이 닉네임에 들어가지 않도록)
+	if(filter) nickname = nickname.replace(filter, "");
+	nickname = nickname.replace(/\s+/g, " ").trim();
+	if(nickname.length > 12) nickname = nickname.slice(0, 12).trim();
+	if(!nickname) return res.send({ error: 400 });
 	MainDB.users.findOne([ 'nickname', nickname ]).on(function(data){
 		if(data) return res.send({ error: 456 });
 		MainDB.users.findOne([ '_id', req.session.profile.id ]).on(function(requester){
 			const now = Number(new Date());
+			if(!requester) return res.send({ error: 400 });
 			if(GLOBAL.NICKNAME_LIMIT.TERM > 0){
 				const changedDate = new Date(Number(requester.nickChanged));
 				
@@ -301,6 +343,7 @@ Server.post("/buy/:id", function(req, res){
 		var uid = req.session.profile.id;
 		var gid = req.params.id;
 		
+		UserLock.run(uid, res, function(){
 		MainDB.kkutu_shop.findOne([ '_id', gid ]).on(function($item){
 			if(!$item) return res.json({ error: 400 });
 			if($item.cost < 0) return res.json({ error: 400 });
@@ -312,16 +355,17 @@ Server.post("/buy/:id", function(req, res){
 				if(postM < 0) return res.send({ result: 400 });
 				
 				obtain($user, gid, 1, $item.term);
-				MainDB.users.update([ '_id', uid ]).set(
+				updateUserMoney(uid, $user.money, [
 					[ 'money', postM ],
 					[ 'box', $user.box ]
-				).on(function($fin){
+				], res, function(){
 					res.send({ result: 200, money: postM, box: $user.box });
 					JLog.log("[PURCHASED] " + gid + " by " + uid);
+					// HIT를 올리는 데에 동시성 문제가 발생한다. 조심하자.
+					MainDB.kkutu_shop.update([ '_id', gid ]).set([ 'hit', $item.hit + 1 ]).on();
 				});
-				// HIT를 올리는 데에 동시성 문제가 발생한다. 조심하자.
-				MainDB.kkutu_shop.update([ '_id', gid ]).set([ 'hit', $item.hit + 1 ]).on();
 			});
+		});
 		});
 	}else res.json({ error: 423 });
 });
@@ -332,6 +376,7 @@ Server.post("/equip/:id", function(req, res){
 	var isLeft = req.body.isLeft == "true";
 	var now = Date.now() * 0.001;
 	
+	UserLock.run(uid, res, function(){
 	MainDB.users.findOne([ '_id', uid ]).limit([ 'box', true ], [ 'equip', true ]).on(function($user){
 		if(!$user) return res.json({ error: 400 });
 		if(!$user.box) $user.box = {};
@@ -367,6 +412,7 @@ Server.post("/equip/:id", function(req, res){
 			});
 		});
 	});
+	});
 });
 Server.post("/payback/:id", function(req, res){
 	if(!req.session.profile) return res.json({ error: 400 });
@@ -374,10 +420,12 @@ Server.post("/payback/:id", function(req, res){
 	var gid = req.params.id;
 	var isDyn = gid.charAt() == '$';
 	
+	UserLock.run(uid, res, function(){
 	MainDB.users.findOne([ '_id', uid ]).limit([ 'money', true ], [ 'box', true ]).on(function($user){
 		if(!$user) return res.json({ error: 400 });
 		if(!$user.box) $user.box = {};
 		var q = $user.box[gid];
+		var prevMoney = $user.money;
 		
 		if(!q) return res.json({ error: 430 });
 		MainDB.kkutu_shop.findOne([ '_id', isDyn ? gid.slice(0, 4) : gid ]).limit([ 'cost', true ]).on(function($item){
@@ -385,10 +433,11 @@ Server.post("/payback/:id", function(req, res){
 			
 			consume($user, gid, 1, true);
 			$user.money = Number($user.money) + Math.round(0.2 * Number($item.cost));
-			MainDB.users.update([ '_id', uid ]).set([ 'money', $user.money ], [ 'box', $user.box ]).on(function($res){
+			updateUserMoney(uid, prevMoney, [ [ 'money', $user.money ], [ 'box', $user.box ] ], res, function(){
 				res.send({ result: 200, box: $user.box, money: $user.money });
 			});
 		});
+	});
 	});
 });
 Server.post("/enhance/:id", function(req, res){
@@ -397,8 +446,10 @@ Server.post("/enhance/:id", function(req, res){
 	var gid = req.params.id;
 	var isDyn = gid.charAt() == '$';
 	
+	UserLock.run(uid, res, function(){
 	MainDB.users.findOne([ '_id', uid ]).limit([ 'money', true ], [ 'box', true ], [ 'equip', true ], [ 'kkutu', true ]).on(function($user){
 		if(!$user) return res.json({ error: 400 });
+		var prevMoney = $user.money;
 		if(!$user.box) $user.box = {};
 		if(!$user.equip) $user.equip = {};
 		if(!$user.kkutu) $user.kkutu = {};
@@ -436,10 +487,10 @@ Server.post("/enhance/:id", function(req, res){
 				if(!enhance[gid]) enhance[gid] = {};
 				enhance[gid][picked] = Number(enhance[gid][picked] || 0) + step;
 			}
-			MainDB.users.update([ '_id', uid ]).set(
+			updateUserMoney(uid, prevMoney, [
 				[ 'money', $user.money ],
 				[ 'kkutu', $user.kkutu ]
-			).on(function($res){
+			], res, function(){
 				res.send({
 					result: 200,
 					success: success,
@@ -455,6 +506,7 @@ Server.post("/enhance/:id", function(req, res){
 			});
 		});
 	});
+	});
 });
 function blendWord(word){
 	var lang = parseLanguage(word);
@@ -468,7 +520,7 @@ function blendWord(word){
 			
 			kl.push([ Math.floor(k/28/21), Math.floor(k/28)%21, k%28 ]);
 		}
-		[0,1,2].sort((a, b) => (Math.random() < 0.5)).forEach((v, i) => {
+		shuffle([0,1,2]).forEach((v, i) => {
 			kr.push(kl[v][i]);
 		});
 		return String.fromCharCode(((kr[0] * 21) + kr[1]) * 28 + kr[2] + 0xAC00);
@@ -480,14 +532,19 @@ function parseLanguage(word){
 Server.post("/cf", function(req, res){
 	if(!req.session.profile) return res.json({ error: 400 });
 	var uid = req.session.profile.id;
-	var tray = (req.body.tray || "").split('|');
+	var tray = String(req.body.tray || "").split('|');
 	var i, o;
 	
 	if(tray.length < 1 || tray.length > 6) return res.json({ error: 400 });
+	// 글자 조각($WPA/B/C + 글자 한 개)만 재료로 쓸 수 있다.
+	// (다른 아이템 키를 넣으면 level이 음수가 되어 비용이 음수 = 돈이 늘어나는 문제가 있었다)
+	if(!tray.every(function(item){ return /^\$WP[ABC][a-z가-힣]$/.test(item); })) return res.json({ error: 400 });
+	UserLock.run(uid, res, function(){
 	MainDB.users.findOne([ '_id', uid ]).limit([ 'money', true ], [ 'box', true ]).on(function($user){
 		if(!$user) return res.json({ error: 400 });
 		if(!$user.box) $user.box = {};
 		var req = {}, word = "", level = 0;
+		var prevMoney = $user.money;
 		var cfr, gain = [];
 		var blend;
 		
@@ -517,10 +574,11 @@ Server.post("/cf", function(req, res){
 				gain.push(o);
 			}
 			$user.money -= cfr.cost;
-			MainDB.users.update([ '_id', uid ]).set([ 'money', $user.money ], [ 'box', $user.box ]).on(function($res){
+			updateUserMoney(uid, prevMoney, [ [ 'money', $user.money ], [ 'box', $user.box ] ], res, function(){
 				res.send({ result: 200, box: $user.box, money: $user.money, gain: gain });
 			});
 		});
+	});
 	});
 	// res.send(getCFRewards(req.params.word, Number(req.query.l || 0)));
 });

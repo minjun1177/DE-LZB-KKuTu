@@ -33,5 +33,9 @@ html
 		each val in loginList
 			a(href="/login/" + val.vendor)
 				button(style="color: " + val.fontColor + "; background-color: " + val.color + ";")= L(val.displayName)
+		//- 설정된 OAuth 제공자가 하나도 없으면 빈 화면 대신 안내와 돌아가기 링크를 보여 준다.
+		if !loginList || !Object.keys(loginList).length
+			div.login-none= L('loginNone')
+			a.login-none(href='/')= L('loginNoneBack')
 		//볕뉘 수정 끝
 		div.login-legal!= L('loginLegal')

@@ -23,9 +23,22 @@ $(document).ready(function(){
 	$data.PUBLIC = $("#PUBLIC").html() == "true";
 	$data.URL = $("#URL").html();
 	$data.ROOM_PORT = $("#ROOM_PORT").html();
-	$data.NICKNAME_LIMIT = JSON.parse($("#NICKNAME_LIMIT").text());
-	$data.NICKNAME_LIMIT.REGEX.unshift(null);
-	$data.NICKNAME_LIMIT.REGEX = new (Function.prototype.bind.apply(RegExp, $data.NICKNAME_LIMIT.REGEX));
+	// 페이지를 그린 언어 (URL에 locale이 없어도 쿠키로 정해진 언어가 들어 있다)
+	$data.locale = $("#LOCALE_CODE").text() || "ko_KR";
+	try{
+		$data.NICKNAME_LIMIT = JSON.parse($("#NICKNAME_LIMIT").text());
+	}catch(e){
+		$data.NICKNAME_LIMIT = {};
+	}
+	if(!$data.NICKNAME_LIMIT || typeof $data.NICKNAME_LIMIT != "object") $data.NICKNAME_LIMIT = {};
+	// REGEX가 없거나 잘못되어도 게임 화면 전체가 멈추지 않도록 한다. (설정 예시처럼 숫자만 넣는 경우 등)
+	try{
+		$data.NICKNAME_LIMIT.REGEX = Array.isArray($data.NICKNAME_LIMIT.REGEX) && $data.NICKNAME_LIMIT.REGEX[0]
+			? new RegExp($data.NICKNAME_LIMIT.REGEX[0], $data.NICKNAME_LIMIT.REGEX[1] || "")
+			: null;
+	}catch(e){
+		$data.NICKNAME_LIMIT.REGEX = null;
+	}
 	$data.version = $("#version").html();
 	$data.server = location.href.match(/\?.*server=(\d+)/)[1];
 	$data.shop = {};
@@ -811,7 +824,8 @@ $(document).ready(function(){
 		if($("#dress-nickname").val() && $("#dress-nickname").val() !== $data.nickname) data.nickname = $("#dress-nickname").val();
 		if($("#dress-exordial").val() !== undefined && $("#dress-exordial").val() !== $data.exordial) data.exordial = $("#dress-exordial").val();
 		
-		if(data.nickname && $data.NICKNAME_LIMIT.REGEX.test(data.nickname)) data.nickname = confirm(L.confirmNickPolicy) ? data.nickname.replace($data.NICKNAME_LIMIT.REGEX, "") : undefined;
+		if($data.NICKNAME_LIMIT.REGEX) $data.NICKNAME_LIMIT.REGEX.lastIndex = 0;
+		if(data.nickname && $data.NICKNAME_LIMIT.REGEX && $data.NICKNAME_LIMIT.REGEX.test(data.nickname)) data.nickname = confirm(L.confirmNickPolicy) ? data.nickname.replace($data.NICKNAME_LIMIT.REGEX, "") : undefined;
 		if(!data.nickname && data.exordial === undefined){
 			$stage.dialog.dressOK.attr("disabled", false);
 			$stage.dialog.dress.hide();

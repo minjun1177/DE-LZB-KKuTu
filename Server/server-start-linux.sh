@@ -1,7 +1,7 @@
+#!/usr/bin/env bash
 # Rule the words! DE LZB KKuTu
 # You can see this file in <https://github.com/minjun1177/DE-LZB-KKuTu>
-
-#!/usr/bin/env bash
+# (shebang must be the first line or it is ignored)
 export KKT_SV_NAME='DE LZB KKuTu'
 KKT_SV_NUMS=2
 echo "KKT_SV_NAME=${KKT_SV_NAME}, KKT_SV_NUMS=${KKT_SV_NUMS}"

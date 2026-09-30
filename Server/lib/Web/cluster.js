@@ -25,11 +25,24 @@ if(isNaN(CPU)){
 	// process.exit(1);
 }
 if(Cluster.isMaster){
+	var keys = {};
+	var fork = function(key){
+		var w = Cluster.fork({ SERVER_NO_FORK: true, WS_KEY: key });
+		
+		keys[w.id] = key;
+	};
 	for(var i=0; i<CPU; i++){
-		Cluster.fork({ SERVER_NO_FORK: true, WS_KEY: i+1 });
+		fork(i+1);
 	}
 	Cluster.on('exit', function(w){
+		var key = keys[w.id];
+		
 		console.log(`Worker ${w.process.pid} died`);
+		delete keys[w.id];
+		// 워커가 죽으면 같은 WS_KEY로 다시 띄운다. (그렇지 않으면 모든 워커가 죽은 뒤 웹 서버가 멈춘다)
+		setTimeout(function(){
+			fork(key);
+		}, 1000);
 	});
 }else{
 	require("./main.js");

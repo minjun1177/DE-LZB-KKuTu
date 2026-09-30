@@ -87,7 +87,8 @@ The core runtime config, loaded by `lib/const.js`, `lib/Web/db.js`,
 
 | Key | Type | Meaning |
 |-----|------|---------|
-| `NICKNAME_LIMIT` | number | Nickname-change cooldown / limit (used by portal + `routes/major.js`) |
+| `NICKNAME_LIMIT` | object | `{ "TERM": <days between nickname changes, 0 = no limit>, "REGEX": [ "<pattern of forbidden characters>", "<flags>" ] }`. Checked by the client and by `routes/major.js` (`/profile`) |
+| `SESSION_SECRET` | string | Secret used to sign the web session cookie. **Set this to a long random string** (or use the `KKT_SESSION_SECRET` env var); the fallback `kkutu` is public |
 | `SEASON` | any | Current season marker (`sub/webinit.js`) |
 | `SEASON_PRE` | any | Pre-season marker (`sub/webinit.js`) |
 | `KKUTUHOT_PATH` | string | Path to the hot-words data file (`routes/admin.js`, see `Server/data/kkutuhot.json`) |
@@ -138,7 +139,8 @@ The core runtime config, loaded by `lib/const.js`, `lib/Web/db.js`,
     "PG_PORT": 5432,
     "PG_DATABASE": "main",
 
-    "NICKNAME_LIMIT": 7,
+    "NICKNAME_LIMIT": { "TERM": 7, "REGEX": [ "[\\{\\}\\[\\]\\/?.,;:|\\)*~`!^\\-+<>@#$%&\\\\=\\(\\'\"]", "gi" ] },
+    "SESSION_SECRET": "change-me-to-a-long-random-string",
 
     "USE_AUTOBAN": false,
     "USE_DISCORD_WEBHOOK": false

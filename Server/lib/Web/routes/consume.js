@@ -18,6 +18,7 @@
 
 var MainDB	 = require("../db");
 var JLog	 = require("../../sub/jjlog");
+var UserLock = require("../../sub/userlock");
 
 exports.run = function(Server, page){
 
@@ -27,10 +28,12 @@ Server.post("/consume/:id", function(req, res){
 	var gid = req.params.id;
 	var isDyn = gid.charAt() == '$';
 	
-	MainDB.users.findOne([ '_id', uid ]).on(function($user){
+	// 같은 아이템을 동시에 여러 번 사용해 보상을 여러 번 받는 것을 막기 위해 사용자별로 순서대로 처리한다.
+	UserLock.run(uid, res, function(){
+	MainDB.users.findOne([ '_id', uid ]).limit([ 'box', true ], [ 'kkutu', true ]).on(function($user){
 		if(!$user) return res.json({ error: 400 });
 		if(!$user.box) return res.json({ error: 400 });
-		if(!$user.lastLogin) $user.lastLogin = new Date().getTime();
+		if(!$user.kkutu) $user.kkutu = {};
 		var q = $user.box[gid];
 		var output;
 		
@@ -39,13 +42,15 @@ Server.post("/consume/:id", function(req, res){
 			if(!$item) return res.json({ error: 430 });
 			consume($user, gid, 1);
 			output = useItem($user, $item, gid);
-			MainDB.users.update([ '_id', uid ]).set($user).on(function($res){
+			// 읽어 온 행 전체를 덮어쓰면 그 사이 바뀐 다른 값(돈, 차단 정보 등)이 옛 값으로 돌아가므로 바뀐 값만 저장한다.
+			MainDB.users.update([ '_id', uid ]).set([ 'box', $user.box ], [ 'kkutu', $user.kkutu ]).on(function($res){
 				output.result = 200;
 				output.box = $user.box;
 				output.data = $user.kkutu;
 				res.send(output);
 			});
 		});
+	});
 	});
 });
 
@@ -65,7 +70,7 @@ function useItem($user, $item, gid){
 			break;
 		case 'dictPage':
 			R.exp = Math.round(Math.sqrt(1 + 2 * ($user.kkutu.score || 0)));
-			$user.kkutu.score += R.exp;
+			$user.kkutu.score = ($user.kkutu.score || 0) + R.exp;
 			break;
 		default:
 			JLog.warn(`Unhandled consumption type: ${$item._id}`);

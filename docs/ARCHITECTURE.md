@@ -194,7 +194,7 @@ Game modes are defined in two places:
    |------|------|-------------|
    | `classic.js`   | Classic   | Standard word-chain (끝말잇기) |
    | `crossword.js` | Crossword | Crossword-style Korean word guessing |
-   | `cw_maker.js`  | —         | Crossword puzzle generator helper |
+   | `cw_maker.js`  | —         | Crossword board generator / checker CLI (`--help`) |
    | `daneo.js`     | Daneo     | Word-duel mode |
    | `hunmin.js`    | Hunmin    | Initial-consonant (훈민정음) quiz |
    | `jaqwi.js`     | Jaqwi     | Consonant quiz by theme (자음퀴즈) |

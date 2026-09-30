@@ -55,6 +55,7 @@ block Jungle
 	span#PUBLIC= PUBLIC ? "true" : undefined
 	span#URL= `${locals.PROTOCOL}://${locals.HOST}:${locals.PORT}/${locals._id}`
 	span#ROOM_PORT= locals.ROOM_PORT
+	span#LOCALE_CODE= locals.lang
 	span#MOREMI_PART= locals.MOREMI_PART.join(',')
 	span#AVAIL_EQUIP= locals.AVAIL_EQUIP.join(',')
 	span#NICKNAME_LIMIT= locals.NICKNAME_LIMIT ? JSON.stringify(locals.NICKNAME_LIMIT) : "{}"
@@ -95,11 +96,14 @@ block Middle
 		button#ExitBtn.for-master.for-normal.for-gaming(style='display: none; background-color: #FFADAD;'): +FA('times')
 		button#ReplayBtn.for-lobby(style='display: none; background-color: #D9FF82;'): +FA('video-camera')
 		button#LeaderboardBtn.for-lobby(style='display: none; background-color: #FFADD3;'): +FA('trophy')
-	+Dialog('SettingDiag', 300, 240, L('settingsText'))
+	//- 볼륨 슬라이더·개구리 접기 옵션은 PC(kkutu.pug)와 같아야 한다. 설정 코드가 #bgm-volume/#effect-volume 값을 읽으므로
+	//- 옛 음소거 체크박스만 있으면 저장 시 볼륨이 NaN이 된다.
+	+Dialog('SettingDiag', 300, 305, L('settingsText'))
 		div.dialog-bar
-			h4= L('mute')
-			+SettingOption('mute-bgm', L('bgm'))
-			+SettingOption('mute-effect', L('effect'))
+			h4= L('bgm')
+			input#bgm-volume(type='range' min='0' max='1' value='0.5' step='0.01' style='width: 50%;')
+			h4= L('effect')
+			input#effect-volume(type='range' min='0' max='1' value='0.5' step='0.01' style='width: 50%;')
 		div.dialog-bar
 			h4= L('denyReq')
 			+SettingOption('deny-invite', L('denyInvite'))
@@ -116,6 +120,8 @@ block Middle
 			+SettingOption('only-waiting', L('onlyWaiting'), "width: 200px;")
 			h4
 			+SettingOption('only-unlock', L('onlyUnlock'), "width: 200px;")
+			h4 
+			+SettingOption('jjoriping-fold', L('jjoripingFold'), "width: 200px;")
 		div.dialog-bar.tail-button
 			button#setting-ok= L('save')
 			button#setting-server= L('changeServer')
@@ -137,23 +143,41 @@ block Middle
 			button#lb-next(style='margin-right: 6px;')= L('nextPage')
 			button#lb-me= L('myRank')
 			button#lb-prev= L('prevPage')
-	+Dialog('QuickDiag', 300, 230, L('quickRoom'))
+	//- 방 만들기 창(RoomDiag)처럼 특수 규칙이 늘어난 만큼 창과 규칙 영역을 키운다. (예전 크기로는 규칙이 창 밖으로 넘쳤다)
+	+Dialog('QuickDiag', 300, 340, L('quickRoom'))
 		div.dialog-bar
 			h4= L('gameMode')
 			select#quick-mode
-				- for(var i in locals.MODE)
-					option(value=Number(i))= L('mode' + locals.MODE[i])
-		div.dialog-bar(style='height: 59px;')
-			h4(style='height: 45px;')= L('misc')
+				optgroup(label=L('mcKorean'))
+					option(value=3)= L('modeKSH')
+					option(value=2)= L('modeKKT')
+					option(value=8)= L('modeKAP')
+					option(value=6)= L('modeKTY')
+					option(value=10)= L('modeKDA')
+					option(value=5)= L('modeKCW')
+					option(value=12)= L('modeKSS')
+					option(value=4)= L('modeCSQ')
+					option(value=9)= L('modeHUN')
+					option(value=14)= L('modeKDG')
+				optgroup(label=L('mcEnglish'))
+					option(value=1)= L('modeESH')
+					option(value=0)= L('modeEKT')
+					option(value=7)= L('modeETY')
+					option(value=11)= L('modeEDA')
+					option(value=13)= L('modeESS')
+					option(value=15)= L('modeEDG')
+		div.dialog-bar(style='height: 150px;')
+			h4(style='height: 150px;')= L('misc')
 			- for(var i in locals.OPTIONS)
 				+GameOption(i, 'quick')
-		div.dialog-bar
+		div.dialog-bar#quickstat
 			h4(style='width: 100%; height: 20px;')#quick-status
 		div.dialog-bar
 			h4(style='width: 100%; height: 20px;')#quick-queue
 		div.dialog-bar.tail-button
 			button#quick-ok= L('OK')
-	+Dialog('RoomDiag', 300, 375)
+	//- PC(kkutu.pug)에서 특수 규칙이 늘어나며 바뀐 크기·목록을 모바일에도 맞춘다.
+	+Dialog('RoomDiag', 300, 477)
 		div.dialog-bar
 			h4= L('roomTitle')
 			input#room-title(placeholder=(nick || L('guest'))+L('roomDefault'), maxlength=20)
@@ -166,8 +190,24 @@ block Middle
 		div.dialog-bar
 			h4= L('gameMode')
 			select#room-mode
-				- for(var i in locals.MODE)
-					option(value=Number(i))= L('mode' + locals.MODE[i])
+				optgroup(label=L('mcKorean'))
+					option(value=3)= L('modeKSH')
+					option(value=2)= L('modeKKT')
+					option(value=8)= L('modeKAP')
+					option(value=6)= L('modeKTY')
+					option(value=10)= L('modeKDA')
+					option(value=5)= L('modeKCW')
+					option(value=12)= L('modeKSS')
+					option(value=4)= L('modeCSQ')
+					option(value=9)= L('modeHUN')
+					option(value=14)= L('modeKDG')
+				optgroup(label=L('mcEnglish'))
+					option(value=1)= L('modeESH')
+					option(value=0)= L('modeEKT')
+					option(value=7)= L('modeETY')
+					option(value=11)= L('modeEDA')
+					option(value=13)= L('modeESS')
+					option(value=15)= L('modeEDG')
 		div.dialog-bar(style='margin-top: -5px; height: 50px;')
 			h4
 			h4#game-mode-expl.dialog-bar-value(style='width: 100%; font-size: 11px;')
@@ -183,13 +223,14 @@ block Middle
 				option(value=90)
 				option(value=120)
 				option(value=150)
-		div.dialog-bar(style='height: 59px;')
-			h4(style='height: 45px;')= L('misc')
+		//- 모바일은 규칙 한 줄이 PC보다 조금 높아 7줄(한국어 모드)이 130px을 넘으므로 높이를 늘린다.
+		div.dialog-bar(style='height: 150px;')
+			h4(style='height: 150px;')= L('misc')
 			- for(var i in locals.OPTIONS)
 				+GameOption(i, 'room')
 			div.dialog-opt#room-injpick-panel
 				button#room-injeong-pick(style='font-size: 11px;')= L('pickInjeong')
-		div.dialog-bar.tail-button
+		div.dialog-bar.tail-button#roombtn
 			button#room-ok= L('OK')
 	+Dialog('InjPickDiag', 200, 400, L('pickInjeong'))
 		h4= L('explInjPick')

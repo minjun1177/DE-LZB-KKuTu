@@ -66,8 +66,8 @@ services:
       - ./deploy/global.docker.json:/app/Server/lib/sub/global.json:ro
       - ./deploy/auth.docker.json:/app/Server/lib/sub/auth.json:ro
     depends_on:
-      # web never re-dials game after a disconnect; it must start after game
-      # and must be restarted whenever game restarts.
+      # web re-dials game automatically after a disconnect, but starting it
+      # after game avoids an empty server list right after boot.
       game:
         condition: service_healthy
       db:

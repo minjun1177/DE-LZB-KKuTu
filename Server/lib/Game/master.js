@@ -18,6 +18,7 @@
 
 var Cluster = require("cluster");
 var File = require('fs');
+var Path = require('path');
 var WebSocket = require('ws');
 var https = require('https');
 var HTTPS_Server;
@@ -105,22 +106,34 @@ function getAutobanReason(reasonKey){
 
 function getClientBlockIp($c){
 	if(!$c) return null;
-	return $c.forwardedIp || $c.remoteAddress || null;
+	// remoteAddress는 WAF / USE_X_FORWARDED_FOR 설정을 반영해 결정된 값이다.
+	// 클라이언트가 임의로 넣을 수 있는 X-Forwarded-For를 그대로 쓰면 차단 우회/타인 차단이 가능하다.
+	return $c.remoteAddress || null;
+}
+function safeSocketSend(socket, text){
+	if(!socket || socket.readyState !== 1) return false;
+	try{
+		socket.send(text);
+		return true;
+	}catch(e){
+		return false;
+	}
 }
 
 function applyAutobanToClient($c, reasonKey){
 	if(!GLOBAL.USE_AUTOBAN) return false;
 	if(!MainDB || !MainDB.ip_block) return false;
+	if(!$c) return false;
 	if($c.admin || (Array.isArray(GLOBAL.ADMIN) && GLOBAL.ADMIN.indexOf($c.id) !== -1)) return false;
 
 	const blockIp = getClientBlockIp($c);
-	if(!$c || !blockIp) return false;
+	if(!blockIp) return false;
 
 	const autoban = GLOBAL.AUTOBAN || {};
 	const reasonText = getAutobanReason(reasonKey);
 	const isForever = !!autoban.IS_AUTOBAN_FOREVER;
 	let reasonBlocked = reasonText;
-	let ipBlockedUntil = GLOBAL.AUTOBAN.IS_AUTOBAN_FOREVER === true ? -1 : GLOBAL.AUTOBAN.AUTOBAN_DAYS ? addDate(Number(autoban.AUTOBAN_DAYS)) : addDate(5);
+	let ipBlockedUntil = -1;
 
 	if(!isForever){
 		let days = Number(autoban.AUTOBAN_DAYS);
@@ -137,14 +150,12 @@ function applyAutobanToClient($c, reasonKey){
 		if(typeof DCWH.sendDiscordWebhookOnAutoban === 'function') DCWH.sendDiscordWebhookOnAutoban($c.id, blockIp, reasonText, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 	}
 
-	if($c.socket && $c.socket.readyState === 1){
-		$c.socket.send(JSON.stringify({
-			type: 'error',
-			code: 446,
-			reasonBlocked: reasonBlocked,
-			ipBlockedUntil: ipBlockedUntil
-		}));
-	}
+	safeSocketSend($c.socket, JSON.stringify({
+		type: 'error',
+		code: 446,
+		reasonBlocked: reasonBlocked,
+		ipBlockedUntil: ipBlockedUntil
+	}));
 	if($c.socket) $c.socket.close();
 
 	JLog.info(`[AutoBan] IP ${blockIp} blocked for ${$c.id} (${reasonText})`);
@@ -171,10 +182,12 @@ function shouldAutobanByBadChat($c, text){
 	return $c._badChatCount >= maxCount;
 }
 
+const ERROR_LOG_PATH = Path.resolve(__dirname, "../../../KKUTU_ERROR.log");
+
 process.on('uncaughtException', function(err){
 	var text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${err.stack}\n`;
 	
-	File.appendFile("/jjolol/KKUTU_ERROR.log", text, function(res){
+	File.appendFile(ERROR_LOG_PATH, text, function(res){
 		JLog.error(`ERROR OCCURRED ON THE MASTER!`);
 		console.log(text);
 	});
@@ -259,7 +272,7 @@ function processAdmin(id, value){
 					MainDB.users.update([ '_id', args[0].trim() ]).set([ 'black', args[1].trim() ], [ 'blockedUntil', -1 ]).on();
 					DIC[id].send('yell', { value: "OK" });
 					JLog.info(`[Block] 사용자 #${args[0].trim()}(이)가 ${args[1].trim()}의 이유로 이용제한 처리되었습니다.`);
-					DCWH.sendDiscordWebhookOnBan(args[0].trim(), args[1].trim(), "inf", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+					DCWH.sendDiscordWebhookOnUserBan(args[0].trim(), args[1].trim(), "inf", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 				}else if(args.length == 3){
 					var blockDays = parseInt(args[2].trim(), 10);
 					if(isNaN(blockDays)){
@@ -268,14 +281,14 @@ function processAdmin(id, value){
 					}
 					MainDB.users.update([ '_id', args[0].trim() ]).set([ 'black', args[1].trim() ], [ 'blockedUntil', addDate(blockDays) ]).on();				
 					DIC[id].send('yell', { value: "OK" });
-					JLog.info(`[Block] 사용자 #${args[0].trim()}(이)가 ${args[1].trim()}일동안 ${args[2].trim()}의 이유로 이용제한 처리되었습니다.`);
-					DCWH.sendDiscordWebhookOnBan(args[0].trim(), args[1].trim(), args[2].trim(), GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+					JLog.info(`[Block] 사용자 #${args[0].trim()}(이)가 ${args[2].trim()}일동안 ${args[1].trim()}의 이유로 이용제한 처리되었습니다.`);
+					DCWH.sendDiscordWebhookOnUserBan(args[0].trim(), args[1].trim(), args[2].trim(), GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 				}else {
 					DIC[id].send('yell', { value: "Invalid arguments." });
 					return null;
 				}				
 				if(temp = DIC[args[0].trim()]){
-					temp.socket.send('{"type":"error","code":410}');
+					safeSocketSend(temp.socket, '{"type":"error","code":410}');
 					temp.socket.close();
 				}
 			}catch(e){
@@ -312,7 +325,7 @@ function processAdmin(id, value){
 						else MainDB.ip_block.insert([ '_id', ipAddr ], [ 'reasonBlocked', reason ], [ 'ipBlockedUntil', blockedUntil ]).on();
 					});
 					DIC[id].send('yell', { value: "OK" });
-					JLog.info(`[Block] IP 주소 ${ipAddr}(이)가 ${reason}일동안 ${args[2].trim()}의 이유로 이용제한 처리되었습니다.`);
+					JLog.info(`[Block] IP 주소 ${ipAddr}(이)가 ${args[2].trim()}일동안 ${reason}의 이유로 이용제한 처리되었습니다.`);
 					// if )
 					DCWH.sendDiscordWebhookOnIPBan(ipAddr, reason, ipBlockDays, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 				}else {
@@ -327,7 +340,7 @@ function processAdmin(id, value){
 			try {
 				MainDB.users.update([ '_id', value ]).set([ 'black', null ], [ 'blockedUntil', 0 ]).on();								
 				JLog.info(`[Block] 사용자 #${value}(이)가 이용제한 해제 처리되었습니다.`);
-				DCWH.sendDiscordWebhookOnUnban(value, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+				DCWH.sendDiscordWebhookOnUserUnban(value, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
 			}catch(e){
 				processAdminErrorCallback(e, id);
 			}
@@ -344,8 +357,10 @@ function processAdmin(id, value){
 		/* Enhanced User Block System [E] */
 		case 'banlist':
 			try {
-				MainDB.users.find([ 'black', { $ne: true } ] ).on(function($body){
-					var list = $body.map(function(item){
+				MainDB.users.find([ 'black', { $ne: null } ]).limit([ 'black', true ], [ 'blockedUntil', true ]).on(function($body){
+					var list = ($body || []).filter(function(item){
+						return item.black && item.black != "null";
+					}).map(function(item){
 						return { id: item._id, reason: item.black, blockedUntil: item.blockedUntil };
 					});
 					if(DIC[id]) DIC[id].send('yell', { value: JSON.stringify(list) });
@@ -356,9 +371,9 @@ function processAdmin(id, value){
 			return null;
 		case 'ipbanlist':
 			try {
-				MainDB.ip_block.find([ '_id', { $ne: true } ]).on(function($body){
+				MainDB.ip_block.find([ 'reasonBlocked', { $ne: null } ]).on(function($body){
 					var now = Date.now();
-					var list = $body.filter(function(item){
+					var list = ($body || []).filter(function(item){
 						var blockedUntil = Number(item.ipBlockedUntil);
 						if(!item.reasonBlocked) return false;
 						return blockedUntil === -1 || blockedUntil > now;
@@ -381,7 +396,7 @@ function addDate(num){
 }
 
 function processAdminErrorCallback(error, id){
-	DIC[id].send('yell', { value: `명령을 처리하는 도중 오류가 발생하였습니다: ${error}` });
+	if(DIC[id]) DIC[id].send('yell', { value: `명령을 처리하는 도중 오류가 발생하였습니다: ${error}` });
 	JLog.warn(`[Block] 명령을 처리하는 도중 오류가 발생하였습니다: ${error}`);
 }
 /* Enhanced User Block System [E] */
@@ -432,7 +447,7 @@ Cluster.on('message', function(worker, msg){
 		case "tail-report":
 			if(temp = T_ROOM[msg.place]){
 				if(!DIC[temp]) delete T_ROOM[msg.place];
-				DIC[temp].send('tail', { a: "room", rid: msg.place, id: msg.id, msg: msg.msg });
+				else DIC[temp].send('tail', { a: "room", rid: msg.place, id: msg.id, msg: msg.msg });
 			}
 			checkTailUser(msg.id, msg.place, msg.msg);
 			break;
@@ -571,33 +586,36 @@ exports.init = function(_SID, CHAN){
 				JLog.warn("Error on #" + key + " on ws: " + err.toString());
 			});
 			// 웹 서버
-			if(info.headers.host.startsWith(GLOBAL.GAME_SERVER_HOST + ":")){
+			if((info.headers.host || "").startsWith(GLOBAL.GAME_SERVER_HOST + ":")){
+				var ws;
+				
 				if(WDIC[key]) WDIC[key].socket.close();
-				WDIC[key] = new KKuTu.WebServer(socket);
+				ws = WDIC[key] = new KKuTu.WebServer(socket);
 				JLog.info(`New web server #${key}`);
-				WDIC[key].socket.on('close', function(){
+				socket.on('close', function(){
 					JLog.alert(`Exit web server #${key}`);
-					WDIC[key].socket.removeAllListeners();
-					delete WDIC[key];
+					socket.removeAllListeners();
+					// 같은 키로 새 웹 서버가 이미 붙었다면 그 연결은 지우지 않는다.
+					if(WDIC[key] === ws) delete WDIC[key];
 				});
 				return;
 			}
 			if(Object.keys(DIC).length >= Const.KKUTU_MAX){
-				socket.send(`{ "type": "error", "code": "full" }`);
+				safeSocketSend(socket, `{ "type": "error", "code": "full" }`);
+				socket.close();
 				return;
 			}
 			MainDB.session.findOne([ '_id', key ]).limit([ 'profile', true ]).on(function($body){
 				$c = new KKuTu.Client(socket, $body ? $body.profile : null, key);
 				$c.admin = GLOBAL.ADMIN.indexOf($c.id) != -1;
 				/* Enhanced User Block System [S] */
-				var forwardedTo = info.headers['x-forwarded-for'];
 				var forwardedFor = info.headers['x-forwarded-for'];
-				var forwardedToIp = forwardedTo ? forwardedTo.split(',')[0].trim() : null;
 				var forwardedIp = forwardedFor ? forwardedFor.split(',')[0].trim() : null;
 				var cfConnectingIp = info.headers['cf-connecting-ip'];
 				$c.forwardedIp = forwardedIp || null;
 				if(GLOBAL.WAF){
-					$c.remoteAddress = forwardedIp || info.connection.remoteAddress;
+					// Cloudflare 뒤에서는 CF-Connecting-IP가 신뢰할 수 있는 실제 IP이다.
+					$c.remoteAddress = cfConnectingIp || forwardedIp || info.connection.remoteAddress;
 				}else{
 					$c.remoteAddress = GLOBAL.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
 						? (cfConnectingIp || forwardedIp || info.connection.remoteAddress)
@@ -627,49 +645,22 @@ exports.init = function(_SID, CHAN){
 					}
 				}
 				/* Enhanced User Block System [S] */
-				if(GLOBAL.USER_BLOCK_OPTIONS.USE_MODULE && ((GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) || !GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)){
-					var blockIp = getClientBlockIp($c);
-					if(!blockIp) return;
-					MainDB.ip_block.findOne([ '_id', blockIp ]).on(function($body){
-						if ($body && $body.reasonBlocked) {
-							var ipBlockedUntil = Number($body.ipBlockedUntil);
-							if(isNaN(ipBlockedUntil)) ipBlockedUntil = 0;
-							if(ipBlockedUntil > 0 && ipBlockedUntil < Date.now()) {
-								MainDB.ip_block.update([ '_id', blockIp ]).set([ 'ipBlockedUntil', 0 ], [ 'reasonBlocked', null ]).on();
-								JLog.info(`IP 주소 ${blockIp}의 이용제한이 해제되었습니다.`);
-								DCWH.sendDiscordWebhookOnIPUnban(blockIp, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
-							}
-							else if(ipBlockedUntil === -1 || ipBlockedUntil > Date.now()) {
-								$c.socket.send(JSON.stringify({
-									type: 'error',
-									code: 446,
-									reasonBlocked: !$body.reasonBlocked ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT : $body.reasonBlocked,
-									ipBlockedUntil: ipBlockedUntil
-								}));
-								$c.socket.close();
-								DCWH.sendDiscordWebhookOnJoinBaneduser($c.id, blockIp, !$body.reasonBlocked ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT : $body.reasonBlocked, $body.ipBlockedUntil || "Unknown", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
-								return;
-							}
-							else {
-								MainDB.ip_block.update([ '_id', blockIp ]).set([ 'ipBlockedUntil', 0 ], [ 'reasonBlocked', null ]).on();
-							}
-						}
-					});
-				}
-				/* Enhanced User Block System [E] */
 				if($c.isAjae === null){
 					$c.sendError(441);
 					$c.socket.close();
 					return;
 				}
+				checkIpBlock($c, function(){
+				/* Enhanced User Block System [E] */
 				$c.refresh().then(function(ref){
+					// 조회하는 동안 연결이 끊겼다면 유령 사용자가 남지 않도록 여기서 멈춘다.
+					if($c.socket.readyState !== 1) return;
 					/* Enhanced User Block System [S] */
 					let isBlockRelease = false;
 					var blockedUntilTs = Number(ref.blockedUntil);
 					if(isNaN(blockedUntilTs)) blockedUntilTs = 0;
 
 					if(ref.result == 444 && blockedUntilTs > 0 && blockedUntilTs < Date.now()) {
-						DIC[$c.id] = $c;
 						MainDB.users.update([ '_id', $c.id ]).set([ 'blockedUntil', 0 ], [ 'black', null ]).on();
 						JLog.info(`사용자 #${$c.id}의 이용제한이 해제되었습니다.`);
 						DCWH.sendDiscordWebhookOnUserUnban($c.id, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
@@ -685,7 +676,7 @@ exports.init = function(_SID, CHAN){
 						MainDB.users.update([ '_id', $c.id ]).set([ 'server', SID ]).on();
 
 						if (($c.guest && GLOBAL.GOOGLE_RECAPTCHA_TO_GUEST) || GLOBAL.GOOGLE_RECAPTCHA_TO_USER) {
-							$c.socket.send(JSON.stringify({
+							safeSocketSend($c.socket, JSON.stringify({
 								type: 'recaptcha',
 								siteKey: GLOBAL.GOOGLE_RECAPTCHA_SITE_KEY
 							}));
@@ -709,6 +700,7 @@ exports.init = function(_SID, CHAN){
 						// JLog.info("Black user #" + $c.id);
 					}
 				});
+				});
 			});
 		});
 		Server.on('error', function (err) {
@@ -717,6 +709,44 @@ exports.init = function(_SID, CHAN){
 		KKuTu.init(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN);
 	};
 };
+
+/* Enhanced User Block System [S] */
+function checkIpBlock($c, next){
+	var opts = GLOBAL.USER_BLOCK_OPTIONS || {};
+	var blockIp;
+
+	if(!opts.USE_MODULE) return next();
+	if(opts.BLOCK_IP_ONLY_FOR_GUEST && !$c.guest) return next();
+	if(!(blockIp = getClientBlockIp($c))) return next();
+
+	MainDB.ip_block.findOne([ '_id', blockIp ]).on(function($body){
+		var ipBlockedUntil, reasonBlocked;
+
+		if(!$body || !$body.reasonBlocked) return next();
+		ipBlockedUntil = Number($body.ipBlockedUntil);
+		if(isNaN(ipBlockedUntil)) ipBlockedUntil = 0;
+		if(ipBlockedUntil === -1 || ipBlockedUntil > Date.now()){
+			reasonBlocked = $body.reasonBlocked || opts.DEFAULT_BLOCKED_TEXT;
+			safeSocketSend($c.socket, JSON.stringify({
+				type: 'error',
+				code: 446,
+				reasonBlocked: reasonBlocked,
+				ipBlockedUntil: ipBlockedUntil
+			}));
+			$c.socket.close();
+			DCWH.sendDiscordWebhookOnJoinBaneduser($c.id, blockIp, reasonBlocked, $body.ipBlockedUntil || "Unknown", GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+			return;
+		}
+		// 기한이 지났거나 올바르지 않은 기한이면 차단을 해제한다.
+		MainDB.ip_block.update([ '_id', blockIp ]).set([ 'ipBlockedUntil', 0 ], [ 'reasonBlocked', null ]).on();
+		if(ipBlockedUntil > 0){
+			JLog.info(`IP 주소 ${blockIp}의 이용제한이 해제되었습니다.`);
+			DCWH.sendDiscordWebhookOnIPUnban(blockIp, GLOBAL.IS_DISCORD_WEBHOOK_ENGLISH);
+		}
+		next();
+	});
+}
+/* Enhanced User Block System [E] */
 
 function joinNewUser($c) {
 	$c.send('welcome', {
@@ -762,7 +792,11 @@ KKuTu.onClientMessage = function ($c, msg) {
 		processClientRequest($c, msg);
 	} else {
 		if (msg.type === 'recaptcha') {
+			if ($c._recaptchaPending) return;
+			$c._recaptchaPending = true;
 			Recaptcha.verifyRecaptcha(msg.token, $c.remoteAddress, function (success) {
+				$c._recaptchaPending = false;
+				if ($c.passRecaptcha) return;
 				if (success) {
 					$c.passRecaptcha = true;
 
@@ -796,16 +830,28 @@ function processClientRequest($c, msg) {
 			$c.refresh();
 			break;
 		case 'updateProfile':
-			if(msg.nickname && hasBadWord(msg.nickname)){
+			if($c.guest) return;
+			if(typeof msg.nickname === 'string' && hasBadWord(msg.nickname)){
 				applyAutobanToClient($c, 'BAD_NICKNAME');
 				return;
 			}
-			msg.id = $c.id;
-			delete msg.type;
-			$c.updateProfile(msg);
-			if(msg.nickname) DIC[$c.id].nickname = DIC[$c.id].profile.title = DIC[$c.id].profile.name = msg.nickname;
-			if(msg.exordial) DIC[$c.id].exordial = msg.exordial;
-			for(let i in DIC) DIC[i].send('updateUser', msg);
+			// 클라이언트가 보낸 값을 그대로 퍼뜨리지 않고, 웹 서버(/profile)가 검증해 저장한 값을 DB에서 다시 읽는다.
+			MainDB.users.findOne([ '_id', $c.id ]).limit([ 'nickname', true ], [ 'exordial', true ]).on(function($user){
+				var data, prevName;
+
+				if(!$user || DIC[$c.id] !== $c) return;
+				data = { id: $c.id };
+				if($user.nickname && $user.nickname != $c.nickname){
+					prevName = ($c.profile.title || $c.profile.name || "").replace(/\s/g, "");
+					if(DNAME[prevName] == $c.id) delete DNAME[prevName];
+					data.nickname = $user.nickname;
+				}
+				if(typeof $user.exordial === 'string' && $user.exordial != $c.exordial) data.exordial = $user.exordial;
+				if(!data.nickname && data.exordial === undefined) return;
+				$c.updateProfile(data);
+				if(data.nickname) DNAME[data.nickname.replace(/\s/g, "")] = $c.id;
+				for(let i in DIC) DIC[i].send('updateUser', data);
+			});
 			break;
 		case 'talk':
 			if (!msg.value) return;
@@ -824,6 +870,7 @@ function processClientRequest($c, msg) {
 			}
 			checkTailUser($c.id, $c.place, msg);
 			if (msg.whisper) {
+				if (typeof msg.whisper !== 'string') return;
 				msg.whisper.split(',').forEach(v => {
 					if (temp = DIC[DNAME[v]]) {
 						temp.send('chat', {
@@ -867,7 +914,7 @@ function processClientRequest($c, msg) {
 		case 'friendEdit':
 			if (!$c.friends) return;
 			if (!$c.friends[msg.id]) return;
-			$c.friends[msg.id] = (msg.memo || "").slice(0, 50);
+			$c.friends[msg.id] = String(msg.memo || "").slice(0, 50);
 			$c.flush(false, false, true);
 			$c.send('friendEdit', {friends: $c.friends});
 			break;
@@ -896,8 +943,10 @@ function processClientRequest($c, msg) {
 			if (isNaN(msg.time)) stable = false;
 
 			if (stable) {
-				if (msg.title.length > 20) stable = false;
-				if (msg.password.length > 20) stable = false;
+				if (typeof msg.title !== 'string' || msg.title.length > 20) stable = false;
+				if (msg.password === undefined || msg.password === null) msg.password = "";
+				if (typeof msg.password !== 'string' || msg.password.length > 20) stable = false;
+				if (typeof msg.opts !== 'object') stable = false;
 				if (msg.limit < 2 || msg.limit > 8) {
 					msg.code = 432;
 					stable = false;
@@ -948,10 +997,17 @@ function processClientRequest($c, msg) {
 }
 
 KKuTu.onClientClosed = function($c, code){
+	var name;
+
+	if($c.socket) $c.socket.removeAllListeners();
+	// 같은 계정이 다시 접속해 DIC가 새 클라이언트로 바뀐 경우(408), 새 클라이언트의 정보를 지우면 안 된다.
+	if(DIC[$c.id] !== $c) return;
 	delete DIC[$c.id];
 	if($c._error != 409) MainDB.users.update([ '_id', $c.id ]).set([ 'server', "" ]).on();
-	if($c.profile) delete DNAME[$c.profile.title || $c.profile.name];
-	if($c.socket) $c.socket.removeAllListeners();
+	if($c.profile){
+		name = ($c.profile.title || $c.profile.name || "").replace(/\s/g, "");
+		if(DNAME[name] == $c.id) delete DNAME[name];
+	}
 	if($c.friends) narrateFriends($c.id, $c.friends, "off");
 	KKuTu.publish('disconn', { id: $c.id });
 

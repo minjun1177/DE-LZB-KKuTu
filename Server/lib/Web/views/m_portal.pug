@@ -25,6 +25,10 @@ block Subject
 block CSS
 	link(rel='stylesheet', href='/css/in_game_kkutu.css')
 	link(rel='stylesheet', href='/css/in_portal.css')
+	//- 개구리 그림(.jjoriping 500px)과 #menu-bar(width 100% + 왼쪽 여백)가 화면보다 넓어 모바일에서 가로로 넘쳤다.
+	//- 배치는 float·inline이 맞물려 정해지므로 구조는 그대로 두고, 이미 float인 #Middle에서 넘친 빈 영역만 잘라낸다.
+	style.
+		#Middle{ overflow-x: hidden; }
 
 block JS
 	script(type='text/javascript', src='/js/in_portal.min.js')
@@ -36,7 +40,7 @@ block Middle
 	+separator(5)
 	div(style='margin-left: calc(50% - 170px);')
 		div(style='float: left; padding-left: 70px;')
-			h3#holder= L('title')
+			h3#holder= L('title').replace(/\[.+?\]/g, "")
 			img#logo(src='/img/kkutu/short_logo.png')
 		div.jjoriping(style='margin-top: 10px;')
 			img.jjoObj.jjoEyeL(src='/img/jjoeyeL.png', style='top: 65px; left: -270px;')

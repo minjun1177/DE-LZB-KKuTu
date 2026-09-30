@@ -59,10 +59,16 @@ exports.roundReady = function(){
 		my.game.theme = my.opts.injpick[Math.floor(Math.random() * ijl)];
 		getAnswer.call(my, my.game.theme).then(function($ans){
 			if(!my.game.done) return;
+			if(!my.gaming) return;
 
-			// $ans가 null이면 골치아프다...
+			// 주제에 맞는 문제가 더 없으면(모두 출제됨 등) 게임을 끝낸다. (null 접근으로 서버가 죽던 문제)
+			if(!$ans || !$ans._id){
+				my.game.round = my.round;
+				my.roundEnd();
+				return;
+			}
 			my.game.late = false;
-			my.game.answer = $ans || {};
+			my.game.answer = $ans;
 			my.game.done.push($ans._id);
 			$ans.mean = ($ans.mean.length > 20) ? $ans.mean : getConsonants($ans._id, Math.round($ans._id.length / 2));
 			my.game.hint = getHint($ans, my.game.theme);
@@ -95,12 +101,26 @@ exports.turnStart = function(){
 	my.game.hintTimer3 = setTimeout(function(){ turnHint.call(my); }, my.game.roundTime * 0.6);
 	my.game.hintTimer4 = setTimeout(function(){ turnHint.call(my); }, my.game.roundTime * 0.8);
 
-	my.byMaster('turnStart', {
+	// 정답은 그림을 그리는 사람에게만 보낸다. (모두에게 보내면 개발자 도구로 정답을 볼 수 있다)
+	sendTurnStart.call(my, {
 		roundTime: my.game.roundTime,
-		word: my.game.answer._id,
 		theme: my.game.theme
-	}, true);
+	});
 };
+function sendTurnStart(data){
+	const my = this;
+	let i, $c;
+
+	if(my.practice){
+		if($c = DIC[my.master]) $c.send('turnStart', Object.assign({}, data, { word: my.game.answer._id }));
+		return;
+	}
+	for(i in DIC){
+		$c = DIC[i];
+		if($c.place != my.id) continue;
+		$c.send('turnStart', (i == my.game.painter) ? Object.assign({}, data, { word: my.game.answer._id }) : data);
+	}
+}
 function turnHint(){
 	const my = this;
 	if(my.game.hint){
@@ -129,6 +149,8 @@ exports.submit = function(client, text){
 	let gu = my.game.giveup ? my.game.giveup.includes(client.id) : true;
 
 	if(!my.game.winner) return;
+	// 그림을 그리는 사람은 정답을 알고 있으므로 정답을 입력해도 점수를 얻지 못하고, 채팅으로도 보내지 않는다.
+	if(client.id == my.game.painter && $ans && text == $ans._id) return;
 	if(my.game.winner.indexOf(client.id) == -1
 		&& text == $ans._id
 		&& play && !gu
@@ -216,16 +238,18 @@ function getConsonants(word, lucky){
 }
 function getHint($ans, theme){
 	let R = [];
-	let h1 = $ans.mean.replace(new RegExp($ans._id, "g"), "★");
+	let h1 = $ans.mean.split($ans._id).join("★");
 	let h2;
+	let tries = 0;
 
 	R.push([theme]);
 	R.push(getConsonants($ans._id, Math.ceil($ans._id.length / 2)));
 
 	R.push(h1);
+	// 항상 같은 결과가 나오는 단어에서 무한 반복을 막는다.
 	do{
 		h2 = getConsonants($ans._id, Math.ceil($ans._id.length / 2));
-	}while(h1 == h2);
+	}while(h1 == h2 && ++tries < 20);
 	R.push(h2);
 
 	return R;

@@ -136,7 +136,12 @@ function sqlWhere(q){
 		var c;
 		var k = whereKey(item[0]);
 		
+		if(item[1] === null) return Escape("%s IS NULL", k);
 		if((c = item[1]['$not']) !== undefined) return Escape("NOT (%s)", wSearch([ item[0], c ]));
+		if((c = item[1]['$ne']) !== undefined){
+			if(c === null) return Escape("%s IS NOT NULL", k);
+			return Escape("%s IS DISTINCT FROM %V", k, c);
+		}
 		if((c = item[1]['$nand']) !== undefined) return Escape("%s & %V = 0", k, c);
 		if((c = item[1]['$lte']) !== undefined) return Escape("%s<=%V", k, c);
 		if((c = item[1]['$gte']) !== undefined) return Escape("%s>=%V", k, c);
@@ -238,7 +243,10 @@ exports.Agent = function(type, origin){
 			origin.zrevrange([ key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES" ], function(err, res){
 				var A = [];
 				var rank = pg * lpp;
-				var i, len = res.length;
+				var i, len;
+				
+				if(err || !res) return R.go({ page: pg, data: [] });
+				len = res.length;
 				
 				for(i=0; i<len; i += 2){
 					A.push({ id: res[i], rank: rank++, score: res[i+1] });
@@ -253,7 +261,7 @@ exports.Agent = function(type, origin){
 			
 			rv = rv || 8;
 			origin.zrevrank([ key, id ], function(err, res){
-				var range = [ Math.max(0, res - Math.round(rv / 2 + 1)), 0 ];
+				var range = [ Math.max(0, (Number(res) || 0) - Math.round(rv / 2 + 1)), 0 ];
 				
 				range[1] = range[0] + rv - 1;
 				origin.zrevrange([ key, range[0], range[1], "WITHSCORES" ], function(err, res){
@@ -300,7 +308,13 @@ exports.Agent = function(type, origin){
 					if(res){
 						if(mode == "findOne"){
 							if(res.rows) res = res.rows[0];
-						}else if(res.rows) res = res.rows;
+						}else if(res.rows){
+							// 영향받은 행 수를 확인할 수 있도록 배열에 rowCount를 붙여 둔다. (낙관적 잠금 등에 사용)
+							var rowCount = res.rowCount;
+							res = res.rows;
+							// for...in 으로 결과를 도는 코드가 많으므로 열거되지 않는 속성으로 붙인다.
+							Object.defineProperty(res, 'rowCount', { value: rowCount, enumerable: false });
+						}
 					}
 					callback(err, res);
 					/*
