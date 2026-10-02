@@ -24,7 +24,7 @@ var DIC;
 const ROBOT_START_DELAY = [ 1200, 800, 400, 200, 0 ]; // 로봇이 생각하는데 걸리는 시간?
 const ROBOT_TYPE_COEF = [ 1250, 750, 500, 250, 0 ]; // 로봇이 타자를 치는데 걸리는 시간 계수?
 const ROBOT_THINK_COEF = [ 4, 2, 1, 0, 0 ]; // 로봇이 단어를 생각하는데 걸리는 시간 계수?
-const ROBOT_HIT_LIMIT = [ 8, 4, 2, 1, 0 ]; // 로봇이 단어를 선택할 때 최소 히트수?
+const ROBOT_HIT_LIMIT = [ 0, 0, 0, 0, 0 ]; // 로봇이 단어를 선택할 때 최소 히트수?
 const ROBOT_LENGTH_LIMIT = [ 3, 4, 9, 99, 99 ]; // 로봇의 최대 단어 길이?
 const ROBOT_LENGTH_RANGES = [ 
     [3, 4],
@@ -274,6 +274,17 @@ exports.submit = function(client, text){
 	}else if(my.rule.lang == "ko"){
 		composedText = composeHangulInput(text);
 		if(composedText) text = composedText;
+	}
+
+	if(my.opts.muuu && !client.robot){
+		/**
+		 * 머 to 대
+		 * 대 to 머
+		 */
+		text = text.replace(/[머대]/g, function(match) {
+			if (match === '머') return '대';
+			if (match === '대') return '머';
+		});
 	}
 
 	var textlength = text.length;

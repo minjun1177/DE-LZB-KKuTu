@@ -55,7 +55,8 @@ exports.OPTIONS = {
 	'ulm': { name: "Unlimited" },
 	'sht': { name: "Short" },
 	'ggu': { name: "GganGganunknown" },
-	'nam': { name: "Nicknam"}
+	'nam': { name: "Nicknam"},
+	'muu': { name: "Muuu" }
 }; // 특수규칙 옵션
 exports.MOREMI_PART = [ 'back', 'eye', 'mouth', 'shoes', 'clothes', 'head', 'lhand', 'rhand', 'front' ];
 exports.CATEGORIES = [ "all", "spec", "skin", "badge", "head", "eye", "mouth", "clothes", "hs", "back" ];
@@ -106,7 +107,7 @@ exports.RULE = { // 규칙
 	},
 	'KKT': { lang: "ko",
 		rule: "Classic",
-		opts: [ "man", "ext", "mis", "loa", "str", "k32", "unk", "ezm", "wcw", "wpn", /* "onl", "ons", */ "nni", "ggu", "nam" ],
+		opts: [ "man", "ext", "mis", "loa", "str", "k32", "unk", "ezm", "wcw", "wpn", "nni", "ggu", "nam", "muu" ],
 		time: 1,
 		ai: true,
 		big: false,
@@ -114,7 +115,7 @@ exports.RULE = { // 규칙
 	},
 	'KSH': { lang: "ko",
 		rule: "Classic",
-		opts: [ "man", "ext", "mis", "loa", "str", "unk", "ezm", "wcw", "wpn", "onl", "ons", "nni", "ggu", "nam" ],
+		opts: [ "man", "ext", "mis", "loa", "str", "unk", "ezm", "wcw", "wpn", "onl", "ons", "nni", "ggu", "nam", "muu" ],
 		time: 1,
 		ai: true,
 		big: false,
@@ -154,7 +155,7 @@ exports.RULE = { // 규칙
 	},
 	'KAP': { lang: "ko",
 		rule: "Classic",
-		opts: [ "man", "ext", "mis", "loa", "str", "unk", "ezm", "wcw", "wpn", "onl", "ons", "nni", "ggu", "nam" ],
+		opts: [ "man", "ext", "mis", "loa", "str", "unk", "ezm", "wcw", "wpn", "onl", "ons", "nni", "ggu", "nam", "muu" ],
 		time: 1,
 		ai: true,
 		big: false,

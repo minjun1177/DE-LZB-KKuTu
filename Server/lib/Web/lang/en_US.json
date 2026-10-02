@@ -393,6 +393,8 @@
 		"explNicknam": "Allows user nicknames on this server.",
 		"optGganGganunknown": "Strict Non-dictionary",
 		"explGganGganunknown": "Allows only completed words among non-dictionary words.",
+		"optMuuu": "Muu",
+		"explMuuu": "Replace '머' with '대' and '대' with '머'.",
 		"hidden": "(Hidden)",
 		"pickInjeong": "Select Topic",
 		"explInjPick": "Select topics to use in the game.",

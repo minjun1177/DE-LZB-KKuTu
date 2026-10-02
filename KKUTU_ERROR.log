@@ -211,4 +211,259 @@ TypeError: Cannot read properties of null (reading '_id')
     at Client._handleReadyForQuery (/DE-LZB-KKuTu/Server/lib/node_modules/pg/lib/client.js:361:19)
     at Connection.emit (node:events:508:28)
     at /DE-LZB-KKuTu/Server/lib/node_modules/pg/lib/connection.js:115:12
-    at Parser.parse (/DE-LZB-KKuTu/Server/lib/node_modules/pg-protocol/dist/parser.js:38:17)
+    at Parser.parse (/DE-LZB-KKuTu/Server/lib/node_modules/pg-protocol/dist/parser.js:38:17):8496 [10/2/2026, 2:16:13 PM] ERROR: TypeError: Cannot read properties of undefined (reading 'muu')
+TypeError: Cannot read properties of undefined (reading 'muu')
+    at exports.submit (/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:287:12)
+    at my.route.my.routeSync (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1587:13)
+    at my.submit (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1556:13)
+    at my.turnRobot [as _onTimeout] (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1542:6)
+    at listOnTimeout (node:internal/timers:587:11)
+    at process.processTimers (node:internal/timers:521:7)
+:8496 [10/2/2026, 2:16:14 PM] ERROR: TypeError: Cannot read properties of undefined (reading 'muu')
+TypeError: Cannot read properties of undefined (reading 'muu')
+    at exports.submit (/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:287:12)
+    at my.route.my.routeSync (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1587:13)
+    at my.submit (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1556:13)
+    at my.turnRobot [as _onTimeout] (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:1542:6)
+    at listOnTimeout (node:internal/timers:587:11)
+    at process.processTimers (node:internal/timers:521:7)
+:8001 [10/2/2026, 2:21:45 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/master.js:709:9)
+:8497 [10/2/2026, 2:21:45 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8497 [10/2/2026, 2:21:45 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8496 [10/2/2026, 2:21:45 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8496 [10/2/2026, 2:21:45 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8001 [10/2/2026, 2:21:53 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/master.js:709:9)
+:8496 [10/2/2026, 2:21:53 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8496 [10/2/2026, 2:21:53 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8497 [10/2/2026, 2:21:53 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8497 [10/2/2026, 2:21:53 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8001 [10/2/2026, 2:22:09 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/master.js:709:9)
+:8496 [10/2/2026, 2:22:09 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8496 [10/2/2026, 2:22:09 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8497 [10/2/2026, 2:22:09 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)
+:8497 [10/2/2026, 2:22:09 PM] ERROR: SyntaxError: Unexpected end of input
+/root/prj/DE-LZB-KKuTu/Server/lib/Game/games/classic.js:1020
+}
+ 
+
+SyntaxError: Unexpected end of input
+    at wrapSafe (node:internal/modules/cjs/loader:1713:18)
+    at Module._compile (node:internal/modules/cjs/loader:1755:20)
+    at Object..js (node:internal/modules/cjs/loader:1913:10)
+    at Module.load (node:internal/modules/cjs/loader:1505:32)
+    at Function._load (node:internal/modules/cjs/loader:1309:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:254:19)
+    at Module.require (node:internal/modules/cjs/loader:1527:12)
+    at require (node:internal/modules/helpers:147:16)
+    at exports.init (/root/prj/DE-LZB-KKuTu/Server/lib/Game/kkutu.js:68:13)
+    at MainDB.ready (/root/prj/DE-LZB-KKuTu/Server/lib/Game/slave.js:222:8)

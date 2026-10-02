@@ -51,3 +51,5 @@ Server/lib/Web/views/*copy.pug
 Server/lib/Web/public/css/*copy.css
 Server/data/kkutuhot.json
 Server/data/nginx/default copy
+minitunnel
+words.sql

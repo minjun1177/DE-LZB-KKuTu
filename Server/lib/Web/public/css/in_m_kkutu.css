@@ -287,6 +287,8 @@ iframe{
 		.room-head-number{ width: 35px; text-align: center; }
 		.room-head-title{ display: none; }
 		.room-head-mode{ margin-right: 5px; width: calc(100% - 170px); text-align: center; }
+			.room-head-mode .expl{ width: 250px; white-space: normal; text-align: left; }
+			.room-head-mode .expl h5{ float: none; }
 		.room-head-limit{ width: 35px; text-align: center; }
 		.room-head-round{ width: 60px; text-align: center; }
 		.room-head-time{ width: 35px; text-align: center; }

@@ -82,7 +82,7 @@ var L;
 		};
 		var $gn = $("#global-notice").hide();
 		var $c;
-		var explSize;
+		var $expl;
 		var gn = $("#gn-content").html() || "";
 		
 		global.profile = $("#profile").html();
@@ -104,9 +104,23 @@ var L;
 			$("#Middle").css('margin-left', Math.max(0, size[0] * 0.5 - 500));
 			$("#Bottom").width(size[0]);
 		}).on('mousemove', function(e){
-			if(explSize == null) return;
-			$(".expl-active").css({ 'left': Math.min(e.clientX + 5, size[0] - explSize[0] - 12), 'top': Math.min(e.clientY + 23, size[1] - explSize[1] - 12) });
+			placeExpl(e.clientX, e.clientY);
 		}).trigger('resize');
+		
+		// 설명 창은 마우스 오른쪽 아래에 두고, 화면을 넘으면 마우스 반대편으로 뒤집는다.
+		// (화면 끝에 붙여 고정하면 한 축만 마우스를 따라가 계단처럼 움직이고, 창이 마우스를 가린다.)
+		function placeExpl(x, y){
+			var w, h, l, t;
+			
+			if(!$expl) return;
+			w = $expl.outerWidth();
+			h = $expl.outerHeight();
+			l = x + 5;
+			if(l + w > size[0] - 5) l = x - w - 5;
+			t = y + 23;
+			if(t + h > size[1] - 5) t = y - h - 5;
+			$expl.css({ 'left': Math.max(0, l), 'top': Math.max(0, t) });
+		}
 		
 		$("#quick-search-btn").on('click', function(e){
 			var v;
@@ -141,14 +155,18 @@ var L;
 		(global.expl = function($mother){
 			var $q = $mother ? $mother.find(".expl") : $(".expl");
 			
-			$q.parent().addClass("expl-mother").on('mouseenter', function(e){
+			// 같은 요소에 여러 번 호출돼도 핸들러가 겹치지 않도록 이전 것을 지우고 건다.
+			$q.parent().addClass("expl-mother").off('.expl').on('mouseenter.expl', function(e){
 				var $e = $(e.currentTarget).children(".expl");
 				
-				explSize = [ $e.width(), $e.height() ];
 				$(".expl-active").removeClass("expl-active");
-				$e.addClass("expl-active");
-			}).on('mouseleave', function(e){
+				$expl = $e.addClass("expl-active");
+				// 보이게 한 뒤에 크기를 재고 바로 자리를 잡는다. 숨긴 채로 재면 크기가 틀리고,
+				// 다음 mousemove 전까지 이전 위치나 원래 문서 위치에 떠 있게 된다.
+				placeExpl(e.clientX, e.clientY);
+			}).on('mouseleave.expl', function(e){
 				$(e.currentTarget).children(".expl").removeClass("expl-active");
+				$expl = null;
 			});
 		})();
 	});

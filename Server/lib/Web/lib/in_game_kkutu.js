@@ -3460,7 +3460,8 @@ function roomListBar(o){
 	.append($("<div>").addClass("rooms-title ellipse").text(badWords(o.title)))
 	.append($("<div>").addClass("rooms-limit").html(o.players.length + " / " + o.limit))
 	.append($("<div>").width(270)
-		.append($("<div>").addClass("rooms-mode").html(opts.join(" / ").toString()))
+		// 특수 규칙이 많으면 한 줄로 줄이고 전체 목록은 마우스를 올렸을 때 보여준다.
+		.append($("<div>").addClass("rooms-mode ellipse").attr('title', opts.join(" / ")).html(opts.join(" / ").toString()))
 		.append($("<div>").addClass("rooms-round").html(L['rounds'] + " " + o.round))
 		.append($("<div>").addClass("rooms-time").html(o.time + L['SECOND']))
 	)
@@ -5077,17 +5078,20 @@ function setRoomHead($obj, room){
 	$obj.empty()
 		.append($("<h5>").addClass("room-head-number").html("["+(room.practice ? L['practice'] : room.id)+"]"))
 		.append($("<h5>").addClass("room-head-title").text(badWords(room.title)))
-		.append($rm = $("<h5>").addClass("room-head-mode").html(opts.join(" / ")))
+		.append($rm = $("<h5>").addClass("room-head-mode ellipse").html(opts.join(" / ")))
 		.append($("<h5>").addClass("room-head-limit").html((mobile ? "" : (L['players'] + " ")) + room.players.length + " / " +room.limit))
 		.append($("<h5>").addClass("room-head-round").html(L['rounds'] + " " + room.round))
 		.append($("<h5>").addClass("room-head-time").html(room.time + L['SECOND']));
 		
+	// 특수 규칙이 많으면 말줄임표로 잘리므로 전체 목록(과 고른 주제)은 툴팁으로 보여준다.
+	var expl = "<h5>" + opts.join(" / ") + "</h5>";
 	if(rule.opts.indexOf("ijp") != -1){
-		$rm.append($("<div>").addClass("expl").html("<h5>" + room.opts.injpick.map(function(item){
+		expl += "<h5>" + room.opts.injpick.map(function(item){
 			return L["theme_" + item];
-		}) + "</h5>"));
-		global.expl($obj);
+		}) + "</h5>";
 	}
+	$rm.append($("<div>").addClass("expl").html(expl));
+	global.expl($obj);
 }
 function loadSounds(list, callback){
 	$data._lsRemain = list.length;

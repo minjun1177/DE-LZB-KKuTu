@@ -17,7 +17,8 @@
 extends m_layout
 
 mixin Dialog(id, w, h, t, nocls)
-	div.dialog(id=id, style=`width: ${w}px; height: ${h}px;`)
+	//- h를 생략하면 창 높이가 내용에 맞춰 늘어난다.
+	div.dialog(id=id, style=`width: ${w}px; height: ${h ? h + 'px' : 'auto'};`)
 		div(class=nocls ? 'no-close dialog-head' : 'dialog-head')
 			div.dialog-title(style=`width: ${w - 20}px;`)!= t || ''
 		div.dialog-body(style='font-size: 13px;')
@@ -177,7 +178,7 @@ block Middle
 		div.dialog-bar.tail-button
 			button#quick-ok= L('OK')
 	//- PC(kkutu.pug)에서 특수 규칙이 늘어나며 바뀐 크기·목록을 모바일에도 맞춘다.
-	+Dialog('RoomDiag', 300, 477)
+	+Dialog('RoomDiag', 300)
 		div.dialog-bar
 			h4= L('roomTitle')
 			input#room-title(placeholder=(nick || L('guest'))+L('roomDefault'), maxlength=20)
@@ -223,13 +224,15 @@ block Middle
 				option(value=90)
 				option(value=120)
 				option(value=150)
-		//- 모바일은 규칙 한 줄이 PC보다 조금 높아 7줄(한국어 모드)이 130px을 넘으므로 높이를 늘린다.
-		div.dialog-bar(style='height: 150px;')
-			h4(style='height: 150px;')= L('misc')
-			- for(var i in locals.OPTIONS)
-				+GameOption(i, 'room')
-			div.dialog-opt#room-injpick-panel
-				button#room-injeong-pick(style='font-size: 11px;')= L('pickInjeong')
+		//- 특수 규칙 수가 모드마다 달라 높이를 고정하면 규칙이 아래 확인 버튼(#roombtn)에 가려진다.
+		//- 규칙 영역과 창 높이를 내용에 맞춰 늘어나게 한다.
+		div.dialog-bar
+			h4= L('misc')
+			div.dialog-bar-value(style='float: left;')
+				- for(var i in locals.OPTIONS)
+					+GameOption(i, 'room')
+				div.dialog-opt#room-injpick-panel
+					button#room-injeong-pick(style='font-size: 11px;')= L('pickInjeong')
 		div.dialog-bar.tail-button#roombtn
 			button#room-ok= L('OK')
 	+Dialog('InjPickDiag', 200, 400, L('pickInjeong'))

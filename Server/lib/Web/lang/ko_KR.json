@@ -384,6 +384,8 @@
 		"explGganGganunknown": "사전에 등재되지 않은 단어중 완성된 단어만 허용합니다.",
 		"optNicknam": "닉네임",
 		"explNicknam": "이 서버 유저 닉네임을 허용합니다.",
+		"optMuuu": "머",
+		"explMuuu": "'머'를 '대'로, '대'를 '머'로 바꿔 입력합니다.",
 		"hidden": "(미공개)",
 		"pickInjeong": "주제 선택",
 		"explInjPick": "게임에서 사용할 주제를 선택하세요.",

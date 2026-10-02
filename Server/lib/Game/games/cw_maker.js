@@ -551,6 +551,8 @@ async function runGenerate(Pg, mapDefs, opts){
 	var blocked = new Set(BANNED_WORDS);
 	var names = Object.keys(mapDefs);
 	var saved = 0, made = 0, failed = 0;
+	// 마지막 성공 이후 연속으로 실패한 횟수와 맵. 모든 맵이 거듭 실패하면 남은 단어로는 더 만들 수 없으므로 멈춘다.
+	var failStreak = 0, failedMaps = new Set();
 	var started = Date.now();
 
 	names.forEach(function(n){ usage[n] = 0; });
@@ -592,8 +594,16 @@ async function runGenerate(Pg, mapDefs, opts){
 			console.log(`\n[${n + 1}/${opts.count}] ${mapName}: 실패 (${result.aborted ? "시간 초과" : "가능한 조합 없음"}, ${secs}초, 탐색 ${result.nodes})`);
 			// 같은 맵만 계속 실패하지 않도록 다음에는 다른 맵이 뽑히게 한다.
 			usage[mapName] += 0.5;
+			failStreak++;
+			failedMaps.add(mapName);
+			if(failedMaps.size == names.length){
+				console.log(`\n모든 맵이 연속으로 ${failStreak}번 실패해 중단합니다. 남은 단어로는 판을 더 만들기 어렵습니다. (--allow-reuse, --timeout 을 늘려 보세요)`);
+				break;
+			}
 			continue;
 		}
+		failStreak = 0;
+		failedMaps.clear();
 		made++;
 		// 이번 실행에서 만든 판도 셈에 넣어 여러 개를 만들 때 맵이 고르게 쓰이게 한다.
 		usage[mapName]++;
