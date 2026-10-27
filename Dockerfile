@@ -1,4 +1,7 @@
-FROM node:24-bookworm-slim
+# Pinned patch level: 24.22.1 is the first 24.x release fixing CVE-2026-111497
+# (Brotli decoder out-of-bounds write leading to RCE in node:zlib), plus the
+# other October 2026 fixes (CVE-2026-105482/105483/106069/106072/105481/106074).
+FROM node:24.22.1-bookworm-slim
 
 WORKDIR /app/Server
 
